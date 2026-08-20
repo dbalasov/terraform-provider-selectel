@@ -5,7 +5,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	dbaas_v2_common "github.com/selectel/dbaas-go/v2/common"
+	dbaas_v2 "github.com/selectel/dbaas-go/v2/common"
 )
 
 type flavorSearchFilterV2 struct {
@@ -191,12 +191,12 @@ func expandFlavorSearchFilterV2(filterSet *schema.Set) (flavorSearchFilterV2, er
 	return filter, nil
 }
 
-func filterV2FlavorByVcpus(flavors []dbaas_v2_common.FlavorResponse, vcpus int) []dbaas_v2_common.FlavorResponse {
+func filterV2FlavorByVcpus(flavors []dbaas_v2.FlavorResponse, vcpus int) []dbaas_v2.FlavorResponse {
 	if vcpus == 0 {
 		return flavors
 	}
 
-	var filteredFlavors []dbaas_v2_common.FlavorResponse
+	var filteredFlavors []dbaas_v2.FlavorResponse
 	for _, f := range flavors {
 		if f.VCPUs == vcpus {
 			filteredFlavors = append(filteredFlavors, f)
@@ -206,12 +206,12 @@ func filterV2FlavorByVcpus(flavors []dbaas_v2_common.FlavorResponse, vcpus int) 
 	return filteredFlavors
 }
 
-func filterV2FlavorByRAM(flavors []dbaas_v2_common.FlavorResponse, ram int) []dbaas_v2_common.FlavorResponse {
+func filterV2FlavorByRAM(flavors []dbaas_v2.FlavorResponse, ram int) []dbaas_v2.FlavorResponse {
 	if ram == 0 {
 		return flavors
 	}
 
-	var filteredFlavors []dbaas_v2_common.FlavorResponse
+	var filteredFlavors []dbaas_v2.FlavorResponse
 	for _, f := range flavors {
 		if f.RAM == ram {
 			filteredFlavors = append(filteredFlavors, f)
@@ -221,12 +221,12 @@ func filterV2FlavorByRAM(flavors []dbaas_v2_common.FlavorResponse, ram int) []db
 	return filteredFlavors
 }
 
-func filterV2FlavorByDisk(flavors []dbaas_v2_common.FlavorResponse, disk int) []dbaas_v2_common.FlavorResponse {
+func filterV2FlavorByDisk(flavors []dbaas_v2.FlavorResponse, disk int) []dbaas_v2.FlavorResponse {
 	if disk == 0 {
 		return flavors
 	}
 
-	var filteredFlavors []dbaas_v2_common.FlavorResponse
+	var filteredFlavors []dbaas_v2.FlavorResponse
 	for _, f := range flavors {
 		if f.Disk == disk {
 			filteredFlavors = append(filteredFlavors, f)
@@ -236,12 +236,12 @@ func filterV2FlavorByDisk(flavors []dbaas_v2_common.FlavorResponse, disk int) []
 	return filteredFlavors
 }
 
-func filterV2FlavorByFlSize(flavors []dbaas_v2_common.FlavorResponse, flSize string) []dbaas_v2_common.FlavorResponse {
+func filterV2FlavorByFlSize(flavors []dbaas_v2.FlavorResponse, flSize string) []dbaas_v2.FlavorResponse {
 	if flSize == "" {
 		return flavors
 	}
 
-	var filteredFlavors []dbaas_v2_common.FlavorResponse
+	var filteredFlavors []dbaas_v2.FlavorResponse
 	for _, f := range flavors {
 		if f.FlSize == flSize {
 			filteredFlavors = append(filteredFlavors, f)
@@ -251,12 +251,12 @@ func filterV2FlavorByFlSize(flavors []dbaas_v2_common.FlavorResponse, flSize str
 	return filteredFlavors
 }
 
-func filterV2FlavorByDatastoreTypeID(flavors []dbaas_v2_common.FlavorResponse, datastoreTypeID string) []dbaas_v2_common.FlavorResponse {
+func filterV2FlavorByDatastoreTypeID(flavors []dbaas_v2.FlavorResponse, datastoreTypeID string) []dbaas_v2.FlavorResponse {
 	if datastoreTypeID == "" {
 		return flavors
 	}
 
-	var filteredFlavors []dbaas_v2_common.FlavorResponse
+	var filteredFlavors []dbaas_v2.FlavorResponse
 	for _, f := range flavors {
 		for _, flavorDatastoreTypeID := range f.DatastoreTypeIDs {
 			if flavorDatastoreTypeID == datastoreTypeID {
@@ -268,12 +268,12 @@ func filterV2FlavorByDatastoreTypeID(flavors []dbaas_v2_common.FlavorResponse, d
 	return filteredFlavors
 }
 
-func filterV2FlavorByAllowedRole(flavors []dbaas_v2_common.FlavorResponse, allowedRole string) []dbaas_v2_common.FlavorResponse {
+func filterV2FlavorByAllowedRole(flavors []dbaas_v2.FlavorResponse, allowedRole string) []dbaas_v2.FlavorResponse {
 	if allowedRole == "" {
 		return flavors
 	}
 
-	var filteredFlavors []dbaas_v2_common.FlavorResponse
+	var filteredFlavors []dbaas_v2.FlavorResponse
 	for _, f := range flavors {
 		for _, flavorAllowedRole := range f.AllowedRoles {
 			if flavorAllowedRole == allowedRole {
@@ -285,7 +285,7 @@ func filterV2FlavorByAllowedRole(flavors []dbaas_v2_common.FlavorResponse, allow
 	return filteredFlavors
 }
 
-func flattenDBaaSV2Flavors(flavors []dbaas_v2_common.FlavorResponse) []any {
+func flattenDBaaSV2Flavors(flavors []dbaas_v2.FlavorResponse) []any {
 	flavorsList := make([]any, len(flavors))
 	for i, flavor := range flavors {
 		flavorMap := make(map[string]any)

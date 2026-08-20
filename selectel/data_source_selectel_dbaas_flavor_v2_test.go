@@ -8,13 +8,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	dbaas_v2_common "github.com/selectel/dbaas-go/v2/common"
+	dbaas_v2 "github.com/selectel/dbaas-go/v2/common"
 	"github.com/selectel/go-selvpcclient/v4/selvpcclient/resell/v2/projects"
 )
 
 func TestAccDBaaSFlavorsV2Basic(t *testing.T) {
 	var (
-		dbaasFlavors []dbaas_v2_common.FlavorResponse
+		dbaasFlavors []dbaas_v2.FlavorResponse
 		project      projects.Project
 	)
 
@@ -46,15 +46,15 @@ func TestAccDBaaSFlavorsV2Basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet("data.selectel_dbaas_flavor_v2.flavor_tf_acc_test_1", "flavors.0.ram"),
 					resource.TestCheckResourceAttrSet("data.selectel_dbaas_flavor_v2.flavor_tf_acc_test_1", "flavors.0.disk"),
 					resource.TestCheckResourceAttrSet("data.selectel_dbaas_flavor_v2.flavor_tf_acc_test_1", "flavors.0.fl_size"),
-					resource.TestCheckResourceAttr("data.selectel_dbaas_flavor_v2.flavor_tf_acc_test_1", "flavors.0.datastore_type_ids.#", "1"),
-					resource.TestCheckResourceAttr("data.selectel_dbaas_flavor_v2.flavor_tf_acc_test_1", "flavors.0.allowed_roles.#", "DATA"),
+					resource.TestCheckResourceAttr("data.selectel_dbaas_flavor_v2.flavor_tf_acc_test_1", "flavors.0.datastore_type_ids.#", "2"),
+					resource.TestCheckResourceAttr("data.selectel_dbaas_flavor_v2.flavor_tf_acc_test_1", "flavors.0.allowed_roles.#", "2"),
 				),
 			},
 		},
 	})
 }
 
-func testAccDBaaSFlavorsV2Exists(n string, dbaasFlavors *[]dbaas_v2_common.FlavorResponse) resource.TestCheckFunc {
+func testAccDBaaSFlavorsV2Exists(n string, dbaasFlavors *[]dbaas_v2.FlavorResponse) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -87,7 +87,7 @@ resource "selectel_vpc_project_v2" "project_tf_acc_test_1" {
 
 data "selectel_dbaas_flavor_v2" "flavor_tf_acc_test_1" {
   project_id = "${selectel_vpc_project_v2.project_tf_acc_test_1.id}"
-  region     = "ru-3"
+  region     = "ru-1"
 }
 `, projectName)
 }
@@ -100,7 +100,7 @@ resource "selectel_vpc_project_v2" "project_tf_acc_test_1" {
 
 data "selectel_dbaas_datastore_type_v2" "dt" {
   project_id = "${selectel_vpc_project_v2.project_tf_acc_test_1.id}"
-  region     = "ru-3"
+  region     = "ru-2"
   filter {
     engine = "clickhouse"
   }
@@ -108,9 +108,10 @@ data "selectel_dbaas_datastore_type_v2" "dt" {
 
 data "selectel_dbaas_flavor_v2" "flavor_tf_acc_test_1" {
   project_id = "${selectel_vpc_project_v2.project_tf_acc_test_1.id}"
-  region     = "ru-3"
+  region     = "ru-1"
   filter {
     datastore_type_id = "${data.selectel_dbaas_datastore_type_v2.dt.datastore_types[0].id}"
+	allowed_role = "DATA"
   }
 }
 `, projectName)
