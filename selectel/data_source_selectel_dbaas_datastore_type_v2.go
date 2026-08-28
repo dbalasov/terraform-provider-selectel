@@ -2,6 +2,7 @@ package selectel
 
 import (
 	"context"
+	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -69,6 +70,11 @@ func dataSourceDBaaSDatastoreTypeV2Read(ctx context.Context, d *schema.ResourceD
 	response, err := dbaasClient.DatastoreType.GetDatastoreTypeList(ctx)
 	if err != nil {
 		return diag.FromErr(errGettingObjects(objectDatastoreTypes, err))
+	}
+
+	if response.Errors != "" {
+		log.Printf("[WARN] datastore types got with error: %s", response.Errors)
+
 	}
 
 	datastoreTypes := response.DatastoreTypes

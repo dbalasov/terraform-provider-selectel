@@ -2,6 +2,7 @@ package selectel
 
 import (
 	"context"
+	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -116,6 +117,11 @@ func dataSourceDBaaSFlavorV2Read(ctx context.Context, d *schema.ResourceData, me
 	response, err := dbaasClient.Flavor.GetFlavorList(ctx)
 	if err != nil {
 		return diag.FromErr(errGettingObjects(objectFlavors, err))
+	}
+
+	if response.Errors != "" {
+		log.Printf("[WARN] flavors got with error: %s", response.Errors)
+
 	}
 
 	flavors := response.Flavors

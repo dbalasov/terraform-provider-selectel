@@ -100,7 +100,7 @@ resource "selectel_vpc_project_v2" "project_tf_acc_test_1" {
 
 data "selectel_dbaas_datastore_type_v2" "dt" {
   project_id = "${selectel_vpc_project_v2.project_tf_acc_test_1.id}"
-  region     = "ru-2"
+  region     = "ru-1"
   filter {
     engine = "clickhouse"
   }

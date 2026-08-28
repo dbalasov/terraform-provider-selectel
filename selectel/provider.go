@@ -199,6 +199,7 @@ func Provider(providerVersion string) *schema.Provider {
 			"selectel_dbaas_kafka_datastore_v1":                     resourceDBaaSKafkaDatastoreV1(),
 			"selectel_dbaas_kafka_topic_v1":                         resourceDBaaSKafkaTopicV1(),
 			"selectel_dbaas_firewall_v1":                            resourceDBaaSFirewallV1(),
+			"selectel_dbaas_clickhouse_datastore_v2":                resourceDBaaSClickhouseDatastoreV2(),
 			"selectel_craas_registry_v1":                            resourceCRaaSRegistryV1(),
 			"selectel_craas_token_v1":                               resourceCRaaSTokenV1(),
 			"selectel_craas_token_v2":                               resourceCRaaSTokenV2(),
