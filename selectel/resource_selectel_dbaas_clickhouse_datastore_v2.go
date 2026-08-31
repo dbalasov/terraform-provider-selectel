@@ -231,6 +231,7 @@ func reconcileClickhouseNodeGroups(
 
 	// Delete.
 	for name, oldGroup := range oldByName {
+
 		if _, exists := newByName[name]; exists {
 			continue
 		}
@@ -259,65 +260,31 @@ func reconcileClickhouseNodeGroup(
 	oldNodeCount := oldGroup["node_count"].(int)
 	newNodeCount := newGroup["node_count"].(int)
 
-	// oldFlavor := expandFlavor(oldGroup["flavor"])
-	// newFlavor := expandFlavor(newGroup["flavor"])
+	oldFlavor := expandDBaasDatastoreV2ClickhouseNodeGroupFlavor(oldGroup["flavor"])
+	newFlavor := expandDBaasDatastoreV2ClickhouseNodeGroupFlavor(newGroup["flavor"])
 
-	if oldNodeCount == newNodeCount {
-		return nil
+	if oldNodeCount != newNodeCount || !equalDBaasClickhouseFlavorV2(oldFlavor, newFlavor) {
+		req := dbaas_v2_ch.NodeGroupResizeRequest{
+			NodeCount: newNodeCount,
+			Flavor:    newFlavor,
+		}
+		if err := resizeClickhouseNodeGroup(
+			ctx,
+			client,
+			datastoreID,
+			nodeGroupID,
+			req,
+			timeout,
+		); err != nil {
+			return fmt.Errorf("resizing node group error: %w", err)
+		}
 	}
-
-	req := dbaas_v2_ch.NodeGroupResizeRequest{
-		NodeCount: newNodeCount,
-		// Flavor:    newFlavor,
-	}
-
-	_, err := client.ClickHouse.ResizeNodeGroup(
-		ctx,
-		datastoreID,
-		nodeGroupID,
-		req,
-	)
 
 	// check fip
 	// check weight
 
-	return err
+	return nil
 }
-
-// func expandFlavor(raw any) Flavor {
-// 	if len(raw) == 0 {
-// 		return Flavor{}
-// 	}
-
-// 	data, ok := raw[0].(map[string]any)
-// 	if !ok {
-// 		return Flavor{}
-// 	}
-
-// 	flavor := Flavor{}
-
-// 	if v, ok := data["id"].(string); ok {
-// 		flavor.ID = v
-// 	}
-
-// 	if v, ok := data["type"].(string); ok {
-// 		flavor.Type = v
-// 	}
-
-// 	if v, ok := data["disk"].(int); ok {
-// 		flavor.Disk = v
-// 	}
-
-// 	if v, ok := data["ram"].(int); ok {
-// 		flavor.RAM = v
-// 	}
-
-// 	if v, ok := data["vcpus"].(int); ok {
-// 		flavor.VCPUs = v
-// 	}
-
-// 	return flavor
-// }
 
 func resourceDBaaSClickHouseDatastoreV2Delete(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	dbaasClient, diagErr := getDBaaSV2Client(d, meta)
@@ -468,4 +435,24 @@ func validateV2ClickHouseNodeGroupFlavor(group map[string]any) error {
 	}
 
 	return nil
+}
+
+func equalDBaasClickhouseFlavorV2(a, b dbaas_v2_ch.FlavorForNodeGroupRequest) bool {
+	if a.Type != b.Type {
+		return false
+	}
+
+	switch a.Type {
+	case dbaas_v2_common.FlavorTypeFIXED:
+		return a.ID == b.ID
+
+	case dbaas_v2_common.FlavorTypeFlexible:
+		return a.Disk == b.Disk &&
+			a.RAM == b.RAM &&
+			a.VCPUs == b.VCPUs &&
+			a.DiskType == b.DiskType
+
+	default:
+		return false
+	}
 }

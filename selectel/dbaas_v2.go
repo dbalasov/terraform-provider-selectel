@@ -245,25 +245,6 @@ func createClickhouseNodeGroup(
 	return nil
 }
 
-// func equalDbaasFlavorV2(a, b Flavor) bool {
-// 	if a.Type != b.Type {
-// 		return false
-// 	}
-
-// 	switch a.Type {
-// 	case "FIXED":
-// 		return a.ID == b.ID
-
-// 	case "FLEX":
-// 		return a.Disk == b.Disk &&
-// 			a.RAM == b.RAM &&
-// 			a.VCPUs == b.VCPUs
-
-// 	default:
-// 		return false
-// 	}
-// }
-
 func deleteClickhouseNodeGroup(
 	ctx context.Context,
 	client *dbaas_v2.API,
@@ -275,6 +256,32 @@ func deleteClickhouseNodeGroup(
 	extaMsg := fmt.Sprintf("delete node group %s", nodeGroupID)
 	log.Print(msgUpdate(objectDatastore, datastoreID, extaMsg))
 	err := client.ClickHouse.DeleteNodeGroup(ctx, datastoreID, nodeGroupID)
+	if err != nil {
+		return errUpdatingObject(objectDatastore, datastoreID, err)
+	}
+
+	log.Printf("[DEBUG] waiting for datastore %s to become 'ACTIVE'", datastoreID)
+	err = waiters.WaitForDBaaSDatastoreV2RunningActive(ctx, client, datastoreID, timeout)
+	if err != nil {
+		return errUpdatingObject(objectDatastore, datastoreID, err)
+	}
+
+	return nil
+}
+
+func resizeClickhouseNodeGroup(
+	ctx context.Context,
+	client *dbaas_v2.API,
+	datastoreID string,
+	nodeGroupID string,
+	resizeData dbaas_v2_ch.NodeGroupResizeRequest,
+	timeout time.Duration,
+) error {
+	extaMsg := fmt.Sprintf("resize node group %s: %+v", nodeGroupID, resizeData)
+
+	log.Print(msgUpdate(objectDatastore, datastoreID, extaMsg))
+
+	_, err := client.ClickHouse.ResizeNodeGroup(ctx, datastoreID, nodeGroupID, resizeData)
 	if err != nil {
 		return errUpdatingObject(objectDatastore, datastoreID, err)
 	}
