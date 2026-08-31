@@ -33,7 +33,7 @@ func resourceDBaaSClickhouseDatastoreV2() *schema.Resource {
 			Update: schema.DefaultTimeout(60 * time.Minute),
 			Delete: schema.DefaultTimeout(60 * time.Minute),
 		},
-		Schema: resourceDBaaSClickhouseDatastoreV2Schema(),
+		Schema: resourceDBaaSV2ClickhouseDatastoreSchema(),
 	}
 }
 
@@ -49,7 +49,7 @@ func resourceDBaaSV2ClickhouseDatastoreCreate(ctx context.Context, d *schema.Res
 		return diagErr
 	}
 
-	nodeGroups := expandDBaasV2DatastoreClickhouseNodeGroupsFromSet(d.Get("node_groups").(*schema.Set))
+	nodeGroups := expandDBaasV2ClickhouseNodeGroupsCreate(d.Get("node_groups").([]any))
 
 	datastoreCreateOpts := dbaas_v2_ch.DatastoreCreateRequest{
 		Name:       d.Get("name").(string),
@@ -60,6 +60,7 @@ func resourceDBaaSV2ClickhouseDatastoreCreate(ctx context.Context, d *schema.Res
 		NodeGroups: nodeGroups,
 	}
 
+	// May be update to V2 (expand and error)
 	sgRaw, sgOk := d.GetOk("security_groups")
 	if sgOk {
 		sgSet := sgRaw.(*schema.Set)
@@ -70,9 +71,13 @@ func resourceDBaaSV2ClickhouseDatastoreCreate(ctx context.Context, d *schema.Res
 		datastoreCreateOpts.SecurityGroups = sg
 	}
 
-	logGroup, logOk := d.GetOk("log_platform")
+	logPlatform, logOk := d.GetOk("log_platform")
 	if logOk {
-		datastoreCreateOpts.LogPlatform = &dbaas_v2_ch.DatastoreLogGroup{LogGroup: logGroup.(string)}
+		log, err := expandDBaaSV2ClickhouseDatastoreLogPlatform(logPlatform)
+		if err != nil {
+			return diag.FromErr(errParseDatastoreV2LogPlatform(err))
+		}
+		datastoreCreateOpts.LogPlatform = &log
 	}
 
 	log.Print(msgCreate(objectDatastore, datastoreCreateOpts))
@@ -110,9 +115,15 @@ func resourceDBaaSV2ClickhouseDatastoreRead(ctx context.Context, d *schema.Resou
 	d.Set("project_id", datastore.ProjectID)
 	d.Set("subnet_id", datastore.SubnetID)
 	d.Set("type_id", datastore.TypeID)
-
 	d.Set("security_groups", datastore.SecurityGroups)
-	d.Set("log_platform", datastore.LogPlatform)
+
+	if datastore.LogPlatform.LogGroup != "" {
+		d.Set("log_platform", []any{
+			map[string]any{
+				"log_group": datastore.LogPlatform.LogGroup,
+			},
+		})
+	}
 
 	nodeGroups := flattenDBaaSV2DatastoreClickhouseNodeGroups(datastore.NodeGroups)
 	if err := d.Set("node_groups", nodeGroups); err != nil {
@@ -139,15 +150,13 @@ func resourceDBaaSV2ClickhouseDatastoreUpdate(ctx context.Context, d *schema.Res
 	timeout := d.Timeout(schema.TimeoutUpdate)
 
 	if d.HasChange("name") {
-		err := updateDBaaSV2ClickhouseDatastoreName(ctx, d, dbaasClient)
-		if err != nil {
+		if err := updateDBaaSV2ClickhouseDatastoreName(ctx, d, dbaasClient); err != nil {
 			return diag.FromErr(err)
 		}
 	}
 
 	if d.HasChange("password") {
-		err := updateDBaaSV2ClickhouseDatastorePassword(ctx, d, dbaasClient)
-		if err != nil {
+		if err := updateDBaaSV2ClickhouseDatastorePassword(ctx, d, dbaasClient); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -178,7 +187,9 @@ func resourceDBaaSV2ClickhouseDatastoreUpdate(ctx context.Context, d *schema.Res
 		// Update security_groups
 	}
 	if d.HasChange("log_platform") {
-		// Update log_platform
+		if err := updateDBaaSV2ClickhouseDatastoreLogPlatform(ctx, d, dbaasClient); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	return resourceDBaaSV2ClickhouseDatastoreRead(ctx, d, meta)
@@ -260,8 +271,8 @@ func reconcileDBaaSV2ClickhouseNodeGroup(
 	oldNodeCount := oldGroup["node_count"].(int)
 	newNodeCount := newGroup["node_count"].(int)
 
-	oldFlavor := expandDBaaSV2DatastoreClickhouseNodeGroupFlavor(oldGroup["flavor"])
-	newFlavor := expandDBaaSV2DatastoreClickhouseNodeGroupFlavor(newGroup["flavor"])
+	oldFlavor := expandDBaaSV2ClickhouseNodeGroupFlavor(oldGroup["flavor"])
+	newFlavor := expandDBaaSV2ClickhouseNodeGroupFlavor(newGroup["flavor"])
 
 	if oldNodeCount != newNodeCount || !equalDBaaSV2ClickhouseFlavor(oldFlavor, newFlavor) {
 		req := dbaas_v2_ch.NodeGroupResizeRequest{

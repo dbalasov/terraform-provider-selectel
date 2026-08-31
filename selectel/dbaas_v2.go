@@ -80,10 +80,6 @@ func validateDBaaSV2DatastoreType(ctx context.Context, expectedDatastoreTypeEngi
 
 func flattenDBaaSV2DatastoreClickhouseNodeGroups(nodeGroups []dbaas_v2_ch.NodeGroupResponse) []any {
 
-	// sort.Slice(nodeGroups, func(i, j int) bool {
-	// 	return nodeGroups[i].Name < nodeGroups[j].Name
-	// })
-
 	flattenedNodeGroups := make([]any, len(nodeGroups))
 
 	for i, ng := range nodeGroups {
@@ -94,6 +90,7 @@ func flattenDBaaSV2DatastoreClickhouseNodeGroups(nodeGroups []dbaas_v2_ch.NodeGr
 			"node_count":     ng.NodeCount,
 			"weight":         ng.Weight,
 			"has_public_ips": ng.HasPublicIPs,
+			"status":         ng.Status,
 			"flavor":         flattenDBaaSV2DatastoreClickhouseNodeGroupFlavor(ng.Flavor),
 		}
 		flattenedNodeGroups[i] = flattenedNG
@@ -124,24 +121,24 @@ func flattenDBaaSV2DatastoreClickhouseNodeGroupFlavor(f dbaas_v2_ch.FlavorRespon
 	}
 }
 
-func expandDBaasV2DatastoreClickhouseNodeGroupsFromSet(nodeGroups *schema.Set) []dbaas_v2_ch.NodeGroupCreateRequest {
-	result := make([]dbaas_v2_ch.NodeGroupCreateRequest, 0, nodeGroups.Len())
+func expandDBaasV2ClickhouseNodeGroupsCreate(nodeGroups []any) []dbaas_v2_ch.NodeGroupCreateRequest {
+	result := make([]dbaas_v2_ch.NodeGroupCreateRequest, 0, len(nodeGroups))
 
-	for _, rawGroup := range nodeGroups.List() {
-		result = append(result, expandDBaaSV2DatastoreClickhouseNodeGroup(rawGroup))
+	for _, rawGroup := range nodeGroups {
+		result = append(result, expandDBaaSV2ClickhouseNodeGroupCreate(rawGroup))
 	}
 
 	return result
 }
 
-func expandDBaaSV2DatastoreClickhouseNodeGroup(raw any) dbaas_v2_ch.NodeGroupCreateRequest {
+func expandDBaaSV2ClickhouseNodeGroupCreate(raw any) dbaas_v2_ch.NodeGroupCreateRequest {
 	ng := raw.(map[string]any)
 
 	req := dbaas_v2_ch.NodeGroupCreateRequest{
 		Name:      ng["name"].(string),
 		Role:      dbaas_v2_ch.NodeGroupRole(ng["role"].(string)),
 		NodeCount: ng["node_count"].(int),
-		Flavor:    expandDBaaSV2DatastoreClickhouseNodeGroupFlavor(ng["flavor"]),
+		Flavor:    expandDBaaSV2ClickhouseNodeGroupFlavor(ng["flavor"]),
 	}
 
 	if weight, ok := ng["weight"]; ok && weight != 0 {
@@ -156,7 +153,7 @@ func expandDBaaSV2DatastoreClickhouseNodeGroup(raw any) dbaas_v2_ch.NodeGroupCre
 	return req
 }
 
-func expandDBaaSV2DatastoreClickhouseNodeGroupFlavor(raw any) dbaas_v2_ch.FlavorForNodeGroupRequest {
+func expandDBaaSV2ClickhouseNodeGroupFlavor(raw any) dbaas_v2_ch.FlavorForNodeGroupRequest {
 	flavors := raw.([]any)
 	if len(flavors) == 0 {
 		return dbaas_v2_ch.FlavorForNodeGroupRequest{}
@@ -178,6 +175,19 @@ func expandDBaaSV2DatastoreClickhouseNodeGroupFlavor(raw any) dbaas_v2_ch.Flavor
 		RAM:      data["ram"].(int),
 		VCPUs:    data["vcpus"].(int),
 	}
+}
+
+func expandDBaaSV2ClickhouseDatastoreLogPlatform(raw any) (dbaas_v2_ch.DatastoreLogGroup, error) {
+	var res dbaas_v2_ch.DatastoreLogGroup
+
+	logPlatform := raw.([]any)
+	if len(logPlatform) == 0 {
+		return res, fmt.Errorf("log_group is not set")
+	}
+
+	logGroup := logPlatform[0].(map[string]any)
+	res.LogGroup = logGroup["log_group"].(string)
+	return res, nil
 }
 
 func updateDBaaSV2ClickhouseDatastoreName(ctx context.Context, d *schema.ResourceData, client *dbaas_v2.API) error {
@@ -220,6 +230,37 @@ func updateDBaaSV2ClickhouseDatastorePassword(ctx context.Context, d *schema.Res
 	return nil
 }
 
+func updateDBaaSV2ClickhouseDatastoreLogPlatform(ctx context.Context, d *schema.ResourceData, client *dbaas_v2.API) error {
+	var updateOpts dbaas_v2_ch.DatastoreLogPlatformRequest
+	var err error
+
+	log.Print(msgUpdate(objectDatastore, d.Id(), updateOpts))
+	rawLogPlatform, ok := d.GetOk("log_platform")
+	if ok {
+		logGroup, err := expandDBaaSV2ClickhouseDatastoreLogPlatform(rawLogPlatform)
+		if err == nil {
+			updateOpts.LogPlatform = logGroup
+			_, err = client.ClickHouse.EnableLogPlatform(ctx, d.Id(), updateOpts)
+		}
+
+	} else {
+		err = client.ClickHouse.DisableLogPlatform(ctx, d.Id())
+	}
+
+	if err != nil {
+		return errUpdatingObject(objectDatastore, d.Id(), err)
+	}
+
+	log.Printf("[DEBUG] waiting for datastore %s to become 'ACTIVE'", d.Id())
+	timeout := d.Timeout(schema.TimeoutUpdate)
+	err = waiters.WaitForDBaaSV2DatastoreRunningActive(ctx, client.ClickHouse, d.Id(), timeout)
+	if err != nil {
+		return errUpdatingObject(objectDatastore, d.Id(), err)
+	}
+
+	return nil
+}
+
 func createDBaaSV2ClickhouseNodeGroup(
 	ctx context.Context,
 	client *dbaas_v2.API,
@@ -227,7 +268,7 @@ func createDBaaSV2ClickhouseNodeGroup(
 	nodeGroupData any,
 	timeout time.Duration,
 ) error {
-	createOpts := expandDBaaSV2DatastoreClickhouseNodeGroup(nodeGroupData)
+	createOpts := expandDBaaSV2ClickhouseNodeGroupCreate(nodeGroupData)
 	extaMsg := fmt.Sprintf("create node group %+v", createOpts)
 
 	log.Print(msgUpdate(objectDatastore, datastoreID, extaMsg))

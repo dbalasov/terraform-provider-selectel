@@ -7,8 +7,8 @@ import (
 	dbaas_v2_common "github.com/selectel/dbaas-go/v2/common"
 )
 
-func resourceDBaaSClickhouseDatastoreV2Schema() map[string]*schema.Schema {
-	datastoreSchema := resourceDBaaSDatastoreV2BaseSchema()
+func resourceDBaaSV2ClickhouseDatastoreSchema() map[string]*schema.Schema {
+	datastoreSchema := resourceDBaaSV2DatastoreBaseSchema()
 
 	datastoreSchema["password"] = &schema.Schema{
 		Type:        schema.TypeString,
@@ -22,7 +22,7 @@ func resourceDBaaSClickhouseDatastoreV2Schema() map[string]*schema.Schema {
 		Required: true,
 
 		Elem: &schema.Resource{
-			Schema: clickhouseNodeGroupSchema(),
+			Schema: dbaasV2ClickhouseNodeGroupSchema(),
 		},
 	}
 
@@ -63,7 +63,7 @@ func resourceDBaaSClickhouseDatastoreV2Schema() map[string]*schema.Schema {
 	return datastoreSchema
 }
 
-func clickhouseNodeGroupSchema() map[string]*schema.Schema {
+func dbaasV2ClickhouseNodeGroupSchema() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"id": {
 			Type:     schema.TypeString,
@@ -99,6 +99,7 @@ func clickhouseNodeGroupSchema() map[string]*schema.Schema {
 		"has_public_ips": {
 			Type:     schema.TypeBool,
 			Optional: true,
+			// Default:  false,
 		},
 
 		"flavor": {
@@ -107,7 +108,7 @@ func clickhouseNodeGroupSchema() map[string]*schema.Schema {
 			MaxItems: 1,
 
 			Elem: &schema.Resource{
-				Schema: clickhouseFlavorSchema(),
+				Schema: dbaasV2ClickhouseFlavorSchema(),
 			},
 		},
 
@@ -118,13 +119,12 @@ func clickhouseNodeGroupSchema() map[string]*schema.Schema {
 	}
 }
 
-func clickhouseFlavorSchema() map[string]*schema.Schema {
+func dbaasV2ClickhouseFlavorSchema() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 
 		"id": {
 			Type:     schema.TypeString,
 			Optional: true,
-			// ConflictsWith: []string{"vcpus", "ram", "disk"},
 		},
 
 		"type": {
@@ -156,7 +156,6 @@ func clickhouseFlavorSchema() map[string]*schema.Schema {
 		"disk_type": {
 			Type:     schema.TypeString,
 			Optional: true,
-			// Default:  string(dbaas_v2_common.FlavorDiskLocal),
 			ValidateFunc: validation.StringInSlice([]string{
 				string(dbaas_v2_common.FlavorDiskLocal),
 				string(dbaas_v2_common.FlavorDiskNetworkUltra),

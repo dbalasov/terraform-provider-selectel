@@ -172,7 +172,7 @@ func resourceDBaaSDatabaseV1BaseSchema() map[string]*schema.Schema {
 	}
 }
 
-func resourceDBaaSDatastoreV2BaseSchema() map[string]*schema.Schema {
+func resourceDBaaSV2DatastoreBaseSchema() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"name": {
 			Type:     schema.TypeString,
