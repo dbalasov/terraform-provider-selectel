@@ -46,7 +46,7 @@ func getDBaaSV2Client(d *schema.ResourceData, meta any) (*dbaas_v2.API, diag.Dia
 	return client, nil
 }
 
-func validateDatastoreTypeV2(ctx context.Context, expectedDatastoreTypeEngines []string, typeID string, client *dbaas_v2.API) diag.Diagnostics {
+func validateDBaaSV2DatastoreType(ctx context.Context, expectedDatastoreTypeEngines []string, typeID string, client *dbaas_v2.API) diag.Diagnostics {
 
 	// no endpoint to get a datastore type in v2
 
@@ -78,7 +78,7 @@ func validateDatastoreTypeV2(ctx context.Context, expectedDatastoreTypeEngines [
 	return nil
 }
 
-func flattenDBaaSDatastoreV2ClickhouseNodeGroups(nodeGroups []dbaas_v2_ch.NodeGroupResponse) []any {
+func flattenDBaaSV2DatastoreClickhouseNodeGroups(nodeGroups []dbaas_v2_ch.NodeGroupResponse) []any {
 
 	// sort.Slice(nodeGroups, func(i, j int) bool {
 	// 	return nodeGroups[i].Name < nodeGroups[j].Name
@@ -94,7 +94,7 @@ func flattenDBaaSDatastoreV2ClickhouseNodeGroups(nodeGroups []dbaas_v2_ch.NodeGr
 			"node_count":     ng.NodeCount,
 			"weight":         ng.Weight,
 			"has_public_ips": ng.HasPublicIPs,
-			"flavor":         flattenDBaasDatastoreV2ClickhouseNodeGroupFlavor(ng.Flavor),
+			"flavor":         flattenDBaaSV2DatastoreClickhouseNodeGroupFlavor(ng.Flavor),
 		}
 		flattenedNodeGroups[i] = flattenedNG
 	}
@@ -102,7 +102,7 @@ func flattenDBaaSDatastoreV2ClickhouseNodeGroups(nodeGroups []dbaas_v2_ch.NodeGr
 	return flattenedNodeGroups
 }
 
-func flattenDBaasDatastoreV2ClickhouseNodeGroupFlavor(f dbaas_v2_ch.FlavorResponse) []any {
+func flattenDBaaSV2DatastoreClickhouseNodeGroupFlavor(f dbaas_v2_ch.FlavorResponse) []any {
 
 	if f.Type == dbaas_v2_common.FlavorTypeFlexible {
 		return []any{
@@ -124,14 +124,24 @@ func flattenDBaasDatastoreV2ClickhouseNodeGroupFlavor(f dbaas_v2_ch.FlavorRespon
 	}
 }
 
-func expandDBaasDatastoreV2ClickhouseNodeGroup(raw any) dbaas_v2_ch.NodeGroupCreateRequest {
+func expandDBaasV2DatastoreClickhouseNodeGroupsFromSet(nodeGroups *schema.Set) []dbaas_v2_ch.NodeGroupCreateRequest {
+	result := make([]dbaas_v2_ch.NodeGroupCreateRequest, 0, nodeGroups.Len())
+
+	for _, rawGroup := range nodeGroups.List() {
+		result = append(result, expandDBaaSV2DatastoreClickhouseNodeGroup(rawGroup))
+	}
+
+	return result
+}
+
+func expandDBaaSV2DatastoreClickhouseNodeGroup(raw any) dbaas_v2_ch.NodeGroupCreateRequest {
 	ng := raw.(map[string]any)
 
 	req := dbaas_v2_ch.NodeGroupCreateRequest{
 		Name:      ng["name"].(string),
 		Role:      dbaas_v2_ch.NodeGroupRole(ng["role"].(string)),
 		NodeCount: ng["node_count"].(int),
-		Flavor:    expandDBaasDatastoreV2ClickhouseNodeGroupFlavor(ng["flavor"]),
+		Flavor:    expandDBaaSV2DatastoreClickhouseNodeGroupFlavor(ng["flavor"]),
 	}
 
 	if weight, ok := ng["weight"]; ok && weight != 0 {
@@ -146,17 +156,7 @@ func expandDBaasDatastoreV2ClickhouseNodeGroup(raw any) dbaas_v2_ch.NodeGroupCre
 	return req
 }
 
-func expandDBaasDatastoreV2ClickhouseNodeGroupsFromSet(nodeGroups *schema.Set) []dbaas_v2_ch.NodeGroupCreateRequest {
-	result := make([]dbaas_v2_ch.NodeGroupCreateRequest, 0, nodeGroups.Len())
-
-	for _, rawGroup := range nodeGroups.List() {
-		result = append(result, expandDBaasDatastoreV2ClickhouseNodeGroup(rawGroup))
-	}
-
-	return result
-}
-
-func expandDBaasDatastoreV2ClickhouseNodeGroupFlavor(raw any) dbaas_v2_ch.FlavorForNodeGroupRequest {
+func expandDBaaSV2DatastoreClickhouseNodeGroupFlavor(raw any) dbaas_v2_ch.FlavorForNodeGroupRequest {
 	flavors := raw.([]any)
 	if len(flavors) == 0 {
 		return dbaas_v2_ch.FlavorForNodeGroupRequest{}
@@ -180,7 +180,7 @@ func expandDBaasDatastoreV2ClickhouseNodeGroupFlavor(raw any) dbaas_v2_ch.Flavor
 	}
 }
 
-func updateClickhouseDatastoreName(ctx context.Context, d *schema.ResourceData, client *dbaas_v2.API) error {
+func updateDBaaSV2ClickhouseDatastoreName(ctx context.Context, d *schema.ResourceData, client *dbaas_v2.API) error {
 	var updateOpts dbaas_v2_ch.DatastoreUpdateRequest
 	updateOpts.Name = d.Get("name").(string)
 
@@ -192,7 +192,7 @@ func updateClickhouseDatastoreName(ctx context.Context, d *schema.ResourceData, 
 
 	log.Printf("[DEBUG] waiting for datastore %s to become 'ACTIVE'", d.Id())
 	timeout := d.Timeout(schema.TimeoutUpdate)
-	err = waiters.WaitForDBaaSDatastoreV2RunningActive(ctx, client, d.Id(), timeout)
+	err = waiters.WaitForDBaaSV2DatastoreRunningActive(ctx, client.ClickHouse, d.Id(), timeout)
 	if err != nil {
 		return errUpdatingObject(objectDatastore, d.Id(), err)
 	}
@@ -200,7 +200,7 @@ func updateClickhouseDatastoreName(ctx context.Context, d *schema.ResourceData, 
 	return nil
 }
 
-func updateClickhouseDatastorePassword(ctx context.Context, d *schema.ResourceData, client *dbaas_v2.API) error {
+func updateDBaaSV2ClickhouseDatastorePassword(ctx context.Context, d *schema.ResourceData, client *dbaas_v2.API) error {
 	var updateOpts dbaas_v2_ch.DatastoreUpdatePasswordRequest
 	updateOpts.NewPassword = d.Get("password").(string)
 
@@ -212,7 +212,7 @@ func updateClickhouseDatastorePassword(ctx context.Context, d *schema.ResourceDa
 
 	log.Printf("[DEBUG] waiting for datastore %s to become 'ACTIVE'", d.Id())
 	timeout := d.Timeout(schema.TimeoutUpdate)
-	err = waiters.WaitForDBaaSDatastoreV2RunningActive(ctx, client, d.Id(), timeout)
+	err = waiters.WaitForDBaaSV2DatastoreRunningActive(ctx, client.ClickHouse, d.Id(), timeout)
 	if err != nil {
 		return errUpdatingObject(objectDatastore, d.Id(), err)
 	}
@@ -220,14 +220,14 @@ func updateClickhouseDatastorePassword(ctx context.Context, d *schema.ResourceDa
 	return nil
 }
 
-func createClickhouseNodeGroup(
+func createDBaaSV2ClickhouseNodeGroup(
 	ctx context.Context,
 	client *dbaas_v2.API,
 	datastoreID string,
 	nodeGroupData any,
 	timeout time.Duration,
 ) error {
-	createOpts := expandDBaasDatastoreV2ClickhouseNodeGroup(nodeGroupData)
+	createOpts := expandDBaaSV2DatastoreClickhouseNodeGroup(nodeGroupData)
 	extaMsg := fmt.Sprintf("create node group %+v", createOpts)
 
 	log.Print(msgUpdate(objectDatastore, datastoreID, extaMsg))
@@ -237,7 +237,7 @@ func createClickhouseNodeGroup(
 	}
 
 	log.Printf("[DEBUG] waiting for datastore %s to become 'ACTIVE'", datastoreID)
-	err = waiters.WaitForDBaaSDatastoreV2RunningActive(ctx, client, datastoreID, timeout)
+	err = waiters.WaitForDBaaSV2DatastoreRunningActive(ctx, client.ClickHouse, datastoreID, timeout)
 	if err != nil {
 		return errUpdatingObject(objectDatastore, datastoreID, err)
 	}
@@ -245,7 +245,7 @@ func createClickhouseNodeGroup(
 	return nil
 }
 
-func deleteClickhouseNodeGroup(
+func deleteDBaaSV2ClickhouseNodeGroup(
 	ctx context.Context,
 	client *dbaas_v2.API,
 	datastoreID string,
@@ -261,7 +261,7 @@ func deleteClickhouseNodeGroup(
 	}
 
 	log.Printf("[DEBUG] waiting for datastore %s to become 'ACTIVE'", datastoreID)
-	err = waiters.WaitForDBaaSDatastoreV2RunningActive(ctx, client, datastoreID, timeout)
+	err = waiters.WaitForDBaaSV2DatastoreRunningActive(ctx, client.ClickHouse, datastoreID, timeout)
 	if err != nil {
 		return errUpdatingObject(objectDatastore, datastoreID, err)
 	}
@@ -269,7 +269,7 @@ func deleteClickhouseNodeGroup(
 	return nil
 }
 
-func resizeClickhouseNodeGroup(
+func resizeDBaaSV2ClickhouseNodeGroup(
 	ctx context.Context,
 	client *dbaas_v2.API,
 	datastoreID string,
@@ -287,7 +287,7 @@ func resizeClickhouseNodeGroup(
 	}
 
 	log.Printf("[DEBUG] waiting for datastore %s to become 'ACTIVE'", datastoreID)
-	err = waiters.WaitForDBaaSDatastoreV2RunningActive(ctx, client, datastoreID, timeout)
+	err = waiters.WaitForDBaaSV2DatastoreRunningActive(ctx, client.ClickHouse, datastoreID, timeout)
 	if err != nil {
 		return errUpdatingObject(objectDatastore, datastoreID, err)
 	}

@@ -18,15 +18,15 @@ import (
 
 func resourceDBaaSClickhouseDatastoreV2() *schema.Resource {
 	return &schema.Resource{
-		CreateContext: resourceDBaaSClickhouseDatastoreV2Create,
-		ReadContext:   resourceDBaaSClickhouseDatastoreV2Read,
-		UpdateContext: resourceDBaaSClickHouseDatastoreV2Update,
-		DeleteContext: resourceDBaaSClickHouseDatastoreV2Delete,
+		CreateContext: resourceDBaaSV2ClickhouseDatastoreCreate,
+		ReadContext:   resourceDBaaSV2ClickhouseDatastoreRead,
+		UpdateContext: resourceDBaaSV2ClickhouseDatastoreUpdate,
+		DeleteContext: resourceDBaaSV2ClickhouseDatastoreDelete,
 		CustomizeDiff: customdiff.All(
-			validateV2ClickHouseDatastoreDiff,
+			validateDBaaSV2ClickhouseDatastoreDiff,
 		),
 		Importer: &schema.ResourceImporter{
-			StateContext: resourceDBaaSClickHouseDatastoreV2ImportState,
+			StateContext: resourceDBaaSV2ClickhouseDatastoreImportState,
 		},
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(60 * time.Minute),
@@ -37,19 +37,19 @@ func resourceDBaaSClickhouseDatastoreV2() *schema.Resource {
 	}
 }
 
-func resourceDBaaSClickhouseDatastoreV2Create(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
+func resourceDBaaSV2ClickhouseDatastoreCreate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	dbaasClient, diagErr := getDBaaSV2Client(d, meta)
 	if diagErr != nil {
 		return diagErr
 	}
 
 	typeID := d.Get("type_id").(string)
-	diagErr = validateDatastoreTypeV2(ctx, []string{clickhouseDatastoreType}, typeID, dbaasClient)
+	diagErr = validateDBaaSV2DatastoreType(ctx, []string{clickhouseDatastoreType}, typeID, dbaasClient)
 	if diagErr != nil {
 		return diagErr
 	}
 
-	nodeGroups := expandDBaasDatastoreV2ClickhouseNodeGroupsFromSet(d.Get("node_groups").(*schema.Set))
+	nodeGroups := expandDBaasV2DatastoreClickhouseNodeGroupsFromSet(d.Get("node_groups").(*schema.Set))
 
 	datastoreCreateOpts := dbaas_v2_ch.DatastoreCreateRequest{
 		Name:       d.Get("name").(string),
@@ -83,17 +83,17 @@ func resourceDBaaSClickhouseDatastoreV2Create(ctx context.Context, d *schema.Res
 
 	log.Printf("[DEBUG] waiting for datastore %s to become 'ACTIVE'", datastore.ID)
 	timeout := d.Timeout(schema.TimeoutCreate)
-	err = waiters.WaitForDBaaSDatastoreV2RunningActive(ctx, dbaasClient, datastore.ID, timeout)
+	err = waiters.WaitForDBaaSV2DatastoreRunningActive(ctx, dbaasClient.ClickHouse, datastore.ID, timeout)
 	if err != nil {
 		return diag.FromErr(errCreatingObject(objectDatastore, err))
 	}
 
 	d.SetId(datastore.ID)
 
-	return resourceDBaaSClickhouseDatastoreV2Read(ctx, d, meta)
+	return resourceDBaaSV2ClickhouseDatastoreRead(ctx, d, meta)
 }
 
-func resourceDBaaSClickhouseDatastoreV2Read(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
+func resourceDBaaSV2ClickhouseDatastoreRead(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	dbaasClient, diagErr := getDBaaSV2Client(d, meta)
 	if diagErr != nil {
 		return diagErr
@@ -114,7 +114,7 @@ func resourceDBaaSClickhouseDatastoreV2Read(ctx context.Context, d *schema.Resou
 	d.Set("security_groups", datastore.SecurityGroups)
 	d.Set("log_platform", datastore.LogPlatform)
 
-	nodeGroups := flattenDBaaSDatastoreV2ClickhouseNodeGroups(datastore.NodeGroups)
+	nodeGroups := flattenDBaaSV2DatastoreClickhouseNodeGroups(datastore.NodeGroups)
 	if err := d.Set("node_groups", nodeGroups); err != nil {
 		log.Print(errSettingComplexAttr("node_groups", err))
 	}
@@ -131,7 +131,7 @@ func resourceDBaaSClickhouseDatastoreV2Read(ctx context.Context, d *schema.Resou
 	return nil
 }
 
-func resourceDBaaSClickHouseDatastoreV2Update(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
+func resourceDBaaSV2ClickhouseDatastoreUpdate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	dbaasClient, diagErr := getDBaaSV2Client(d, meta)
 	if diagErr != nil {
 		return diagErr
@@ -139,14 +139,14 @@ func resourceDBaaSClickHouseDatastoreV2Update(ctx context.Context, d *schema.Res
 	timeout := d.Timeout(schema.TimeoutUpdate)
 
 	if d.HasChange("name") {
-		err := updateClickhouseDatastoreName(ctx, d, dbaasClient)
+		err := updateDBaaSV2ClickhouseDatastoreName(ctx, d, dbaasClient)
 		if err != nil {
 			return diag.FromErr(err)
 		}
 	}
 
 	if d.HasChange("password") {
-		err := updateClickhouseDatastorePassword(ctx, d, dbaasClient)
+		err := updateDBaaSV2ClickhouseDatastorePassword(ctx, d, dbaasClient)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -158,7 +158,7 @@ func resourceDBaaSClickHouseDatastoreV2Update(ctx context.Context, d *schema.Res
 		oldGroups := oldRaw.([]any)
 		newGroups := newRaw.([]any)
 
-		if err := reconcileClickhouseNodeGroups(
+		if err := reconcileDBaaSV2ClickhouseNodeGroups(
 			ctx,
 			dbaasClient,
 			d.Id(),
@@ -181,10 +181,10 @@ func resourceDBaaSClickHouseDatastoreV2Update(ctx context.Context, d *schema.Res
 		// Update log_platform
 	}
 
-	return resourceDBaaSClickhouseDatastoreV2Read(ctx, d, meta)
+	return resourceDBaaSV2ClickhouseDatastoreRead(ctx, d, meta)
 }
 
-func reconcileClickhouseNodeGroups(
+func reconcileDBaaSV2ClickhouseNodeGroups(
 	ctx context.Context,
 	client *dbaas_v2.API,
 	datastoreID string,
@@ -212,7 +212,7 @@ func reconcileClickhouseNodeGroups(
 		oldGroup, exists := oldByName[name]
 
 		if !exists {
-			if err := createClickhouseNodeGroup(
+			if err := createDBaaSV2ClickhouseNodeGroup(
 				ctx, client, datastoreID, newGroup, timeout,
 			); err != nil {
 				return fmt.Errorf("creating node group error: %w", err)
@@ -222,7 +222,7 @@ func reconcileClickhouseNodeGroups(
 
 		oldID := oldGroup["id"].(string)
 
-		if err := reconcileClickhouseNodeGroup(
+		if err := reconcileDBaaSV2ClickhouseNodeGroup(
 			ctx, client, datastoreID, oldID, oldGroup, newGroup, timeout,
 		); err != nil {
 			return fmt.Errorf("reconciliation node group error: %w", err)
@@ -238,7 +238,7 @@ func reconcileClickhouseNodeGroups(
 
 		oldID := oldGroup["id"].(string)
 
-		if err := deleteClickhouseNodeGroup(
+		if err := deleteDBaaSV2ClickhouseNodeGroup(
 			ctx, client, datastoreID, oldID, timeout,
 		); err != nil {
 			return fmt.Errorf("deleting node group error: %w", err)
@@ -248,7 +248,7 @@ func reconcileClickhouseNodeGroups(
 	return nil
 }
 
-func reconcileClickhouseNodeGroup(
+func reconcileDBaaSV2ClickhouseNodeGroup(
 	ctx context.Context,
 	client *dbaas_v2.API,
 	datastoreID string,
@@ -260,15 +260,15 @@ func reconcileClickhouseNodeGroup(
 	oldNodeCount := oldGroup["node_count"].(int)
 	newNodeCount := newGroup["node_count"].(int)
 
-	oldFlavor := expandDBaasDatastoreV2ClickhouseNodeGroupFlavor(oldGroup["flavor"])
-	newFlavor := expandDBaasDatastoreV2ClickhouseNodeGroupFlavor(newGroup["flavor"])
+	oldFlavor := expandDBaaSV2DatastoreClickhouseNodeGroupFlavor(oldGroup["flavor"])
+	newFlavor := expandDBaaSV2DatastoreClickhouseNodeGroupFlavor(newGroup["flavor"])
 
-	if oldNodeCount != newNodeCount || !equalDBaasClickhouseFlavorV2(oldFlavor, newFlavor) {
+	if oldNodeCount != newNodeCount || !equalDBaaSV2ClickhouseFlavor(oldFlavor, newFlavor) {
 		req := dbaas_v2_ch.NodeGroupResizeRequest{
 			NodeCount: newNodeCount,
 			Flavor:    newFlavor,
 		}
-		if err := resizeClickhouseNodeGroup(
+		if err := resizeDBaaSV2ClickhouseNodeGroup(
 			ctx,
 			client,
 			datastoreID,
@@ -286,7 +286,7 @@ func reconcileClickhouseNodeGroup(
 	return nil
 }
 
-func resourceDBaaSClickHouseDatastoreV2Delete(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
+func resourceDBaaSV2ClickhouseDatastoreDelete(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	dbaasClient, diagErr := getDBaaSV2Client(d, meta)
 	if diagErr != nil {
 		return diagErr
@@ -300,14 +300,14 @@ func resourceDBaaSClickHouseDatastoreV2Delete(ctx context.Context, d *schema.Res
 
 	log.Printf("[DEBUG] waiting for datastore %s to become deleted", d.Id())
 	timeout := d.Timeout(schema.TimeoutDelete)
-	err = waiters.WaitForDBaaSDatastoreV2Deleted(ctx, dbaasClient, d.Id(), timeout)
+	err = waiters.WaitForDBaaSV2DatastoreDeleted(ctx, dbaasClient.ClickHouse, d.Id(), timeout)
 	if err != nil {
 		return diag.FromErr(errDeletingObject(objectDatastore, d.Id(), err))
 	}
 	return nil
 }
 
-func resourceDBaaSClickHouseDatastoreV2ImportState(_ context.Context, d *schema.ResourceData, meta any) ([]*schema.ResourceData, error) {
+func resourceDBaaSV2ClickhouseDatastoreImportState(_ context.Context, d *schema.ResourceData, meta any) ([]*schema.ResourceData, error) {
 	config := meta.(*Config)
 	if config.ProjectID == "" {
 		return nil, errors.New("INFRA_PROJECT_ID must be set for the resource import")
@@ -322,7 +322,7 @@ func resourceDBaaSClickHouseDatastoreV2ImportState(_ context.Context, d *schema.
 	return []*schema.ResourceData{d}, nil
 }
 
-func validateV2ClickHouseDatastoreDiff(
+func validateDBaaSV2ClickhouseDatastoreDiff(
 	ctx context.Context,
 	diff *schema.ResourceDiff,
 	meta any,
@@ -335,7 +335,7 @@ func validateV2ClickHouseDatastoreDiff(
 	for _, rawGroup := range rawGroups {
 		group := rawGroup.(map[string]any)
 
-		if err := validateV2ClickHouseNodeGroup(group); err != nil {
+		if err := validateDBaaSV2ClickHouseNodeGroup(group); err != nil {
 			return err
 		}
 	}
@@ -343,7 +343,7 @@ func validateV2ClickHouseDatastoreDiff(
 	return nil
 }
 
-func validateV2ClickHouseNodeGroup(group map[string]any) error {
+func validateDBaaSV2ClickHouseNodeGroup(group map[string]any) error {
 	role := group["role"].(string)
 	hasPublicIPs := group["has_public_ips"].(bool)
 	weight := group["weight"].(int)
@@ -373,14 +373,14 @@ func validateV2ClickHouseNodeGroup(group map[string]any) error {
 		}
 	}
 
-	if err := validateV2ClickHouseNodeGroupFlavor(group); err != nil {
+	if err := validateDBaaSV2ClickHouseNodeGroupFlavor(group); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func validateV2ClickHouseNodeGroupFlavor(group map[string]any) error {
+func validateDBaaSV2ClickHouseNodeGroupFlavor(group map[string]any) error {
 	rawFlavors := group["flavor"].([]any)
 	if len(rawFlavors) == 0 {
 		return nil
@@ -437,7 +437,7 @@ func validateV2ClickHouseNodeGroupFlavor(group map[string]any) error {
 	return nil
 }
 
-func equalDBaasClickhouseFlavorV2(a, b dbaas_v2_ch.FlavorForNodeGroupRequest) bool {
+func equalDBaaSV2ClickhouseFlavor(a, b dbaas_v2_ch.FlavorForNodeGroupRequest) bool {
 	if a.Type != b.Type {
 		return false
 	}

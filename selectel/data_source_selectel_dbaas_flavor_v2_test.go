@@ -12,7 +12,7 @@ import (
 	"github.com/selectel/go-selvpcclient/v4/selvpcclient/resell/v2/projects"
 )
 
-func TestAccDBaaSFlavorsV2Basic(t *testing.T) {
+func TestAccDBaaSV2FlavorsBasic(t *testing.T) {
 	var (
 		dbaasFlavors []dbaas_v2.FlavorResponse
 		project      projects.Project
@@ -25,10 +25,10 @@ func TestAccDBaaSFlavorsV2Basic(t *testing.T) {
 		ProviderFactories: testAccProviders,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDBaaSFlavorsV2Basic(projectName),
+				Config: testAccDBaaSV2FlavorsBasic(projectName),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckVPCV2ProjectExists("selectel_vpc_project_v2.project_tf_acc_test_1", &project),
-					testAccDBaaSFlavorsV2Exists("data.selectel_dbaas_flavor_v2.flavor_tf_acc_test_1", &dbaasFlavors),
+					testAccDBaaSV2FlavorsExists("data.selectel_dbaas_flavor_v2.flavor_tf_acc_test_1", &dbaasFlavors),
 					resource.TestCheckResourceAttrSet("data.selectel_dbaas_flavor_v2.flavor_tf_acc_test_1", "flavors.0.id"),
 					resource.TestCheckResourceAttrSet("data.selectel_dbaas_flavor_v2.flavor_tf_acc_test_1", "flavors.0.vcpus"),
 					resource.TestCheckResourceAttrSet("data.selectel_dbaas_flavor_v2.flavor_tf_acc_test_1", "flavors.0.ram"),
@@ -37,10 +37,10 @@ func TestAccDBaaSFlavorsV2Basic(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccDBaaSFlavorsV2ClickHouseFlavor(projectName),
+				Config: testAccDBaaSV2FlavorsClickHouseFlavor(projectName),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckVPCV2ProjectExists("selectel_vpc_project_v2.project_tf_acc_test_1", &project),
-					testAccDBaaSFlavorsV2Exists("data.selectel_dbaas_flavor_v2.flavor_tf_acc_test_1", &dbaasFlavors),
+					testAccDBaaSV2FlavorsExists("data.selectel_dbaas_flavor_v2.flavor_tf_acc_test_1", &dbaasFlavors),
 					resource.TestCheckResourceAttrSet("data.selectel_dbaas_flavor_v2.flavor_tf_acc_test_1", "flavors.0.id"),
 					resource.TestCheckResourceAttrSet("data.selectel_dbaas_flavor_v2.flavor_tf_acc_test_1", "flavors.0.vcpus"),
 					resource.TestCheckResourceAttrSet("data.selectel_dbaas_flavor_v2.flavor_tf_acc_test_1", "flavors.0.ram"),
@@ -54,7 +54,7 @@ func TestAccDBaaSFlavorsV2Basic(t *testing.T) {
 	})
 }
 
-func testAccDBaaSFlavorsV2Exists(n string, dbaasFlavors *[]dbaas_v2.FlavorResponse) resource.TestCheckFunc {
+func testAccDBaaSV2FlavorsExists(n string, dbaasFlavors *[]dbaas_v2.FlavorResponse) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -79,7 +79,7 @@ func testAccDBaaSFlavorsV2Exists(n string, dbaasFlavors *[]dbaas_v2.FlavorRespon
 	}
 }
 
-func testAccDBaaSFlavorsV2Basic(projectName string) string {
+func testAccDBaaSV2FlavorsBasic(projectName string) string {
 	return fmt.Sprintf(`
 resource "selectel_vpc_project_v2" "project_tf_acc_test_1" {
   name        = "%s"
@@ -92,7 +92,7 @@ data "selectel_dbaas_flavor_v2" "flavor_tf_acc_test_1" {
 `, projectName)
 }
 
-func testAccDBaaSFlavorsV2ClickHouseFlavor(projectName string) string {
+func testAccDBaaSV2FlavorsClickHouseFlavor(projectName string) string {
 	return fmt.Sprintf(`
 resource "selectel_vpc_project_v2" "project_tf_acc_test_1" {
   name        = "%s"

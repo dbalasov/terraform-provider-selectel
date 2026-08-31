@@ -18,9 +18,9 @@ type flavorSearchFilterV2 struct {
 	allowedRole     string
 }
 
-func dataSourceDBaaSFlavorV2() *schema.Resource {
+func dataSourceDBaaSV2Flavor() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: dataSourceDBaaSFlavorV2Read,
+		ReadContext: dataSourceDBaaSV2FlavorRead,
 		Schema: map[string]*schema.Schema{
 			"project_id": {
 				Type:     schema.TypeString,
@@ -108,7 +108,7 @@ func dataSourceDBaaSFlavorV2() *schema.Resource {
 	}
 }
 
-func dataSourceDBaaSFlavorV2Read(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
+func dataSourceDBaaSV2FlavorRead(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	dbaasClient, diagErr := getDBaaSV2Client(d, meta)
 	if diagErr != nil {
 		return diagErr
@@ -136,12 +136,12 @@ func dataSourceDBaaSFlavorV2Read(ctx context.Context, d *schema.ResourceData, me
 		return diag.FromErr(err)
 	}
 
-	flavors = filterV2FlavorByVcpus(flavors, filter.vcpus)
-	flavors = filterV2FlavorByRAM(flavors, filter.ram)
-	flavors = filterV2FlavorByDisk(flavors, filter.disk)
-	flavors = filterV2FlavorByFlSize(flavors, filter.flSize)
-	flavors = filterV2FlavorByDatastoreTypeID(flavors, filter.datastoreTypeID)
-	flavors = filterV2FlavorByAllowedRole(flavors, filter.allowedRole)
+	flavors = filterDBaaSV2FlavorByVcpus(flavors, filter.vcpus)
+	flavors = filterDBaaSV2FlavorByRAM(flavors, filter.ram)
+	flavors = filterDBaaSV2FlavorByDisk(flavors, filter.disk)
+	flavors = filterDBaaSV2FlavorByFlSize(flavors, filter.flSize)
+	flavors = filterDBaaSV2FlavorByDatastoreTypeID(flavors, filter.datastoreTypeID)
+	flavors = filterDBaaSV2FlavorByAllowedRole(flavors, filter.allowedRole)
 
 	flavorsFlatten := flattenDBaaSV2Flavors(flavors)
 	if err := d.Set("flavors", flavorsFlatten); err != nil {
@@ -197,7 +197,7 @@ func expandFlavorSearchFilterV2(filterSet *schema.Set) (flavorSearchFilterV2, er
 	return filter, nil
 }
 
-func filterV2FlavorByVcpus(flavors []dbaas_v2.FlavorResponse, vcpus int) []dbaas_v2.FlavorResponse {
+func filterDBaaSV2FlavorByVcpus(flavors []dbaas_v2.FlavorResponse, vcpus int) []dbaas_v2.FlavorResponse {
 	if vcpus == 0 {
 		return flavors
 	}
@@ -212,7 +212,7 @@ func filterV2FlavorByVcpus(flavors []dbaas_v2.FlavorResponse, vcpus int) []dbaas
 	return filteredFlavors
 }
 
-func filterV2FlavorByRAM(flavors []dbaas_v2.FlavorResponse, ram int) []dbaas_v2.FlavorResponse {
+func filterDBaaSV2FlavorByRAM(flavors []dbaas_v2.FlavorResponse, ram int) []dbaas_v2.FlavorResponse {
 	if ram == 0 {
 		return flavors
 	}
@@ -227,7 +227,7 @@ func filterV2FlavorByRAM(flavors []dbaas_v2.FlavorResponse, ram int) []dbaas_v2.
 	return filteredFlavors
 }
 
-func filterV2FlavorByDisk(flavors []dbaas_v2.FlavorResponse, disk int) []dbaas_v2.FlavorResponse {
+func filterDBaaSV2FlavorByDisk(flavors []dbaas_v2.FlavorResponse, disk int) []dbaas_v2.FlavorResponse {
 	if disk == 0 {
 		return flavors
 	}
@@ -242,7 +242,7 @@ func filterV2FlavorByDisk(flavors []dbaas_v2.FlavorResponse, disk int) []dbaas_v
 	return filteredFlavors
 }
 
-func filterV2FlavorByFlSize(flavors []dbaas_v2.FlavorResponse, flSize string) []dbaas_v2.FlavorResponse {
+func filterDBaaSV2FlavorByFlSize(flavors []dbaas_v2.FlavorResponse, flSize string) []dbaas_v2.FlavorResponse {
 	if flSize == "" {
 		return flavors
 	}
@@ -257,7 +257,7 @@ func filterV2FlavorByFlSize(flavors []dbaas_v2.FlavorResponse, flSize string) []
 	return filteredFlavors
 }
 
-func filterV2FlavorByDatastoreTypeID(flavors []dbaas_v2.FlavorResponse, datastoreTypeID string) []dbaas_v2.FlavorResponse {
+func filterDBaaSV2FlavorByDatastoreTypeID(flavors []dbaas_v2.FlavorResponse, datastoreTypeID string) []dbaas_v2.FlavorResponse {
 	if datastoreTypeID == "" {
 		return flavors
 	}
@@ -274,7 +274,7 @@ func filterV2FlavorByDatastoreTypeID(flavors []dbaas_v2.FlavorResponse, datastor
 	return filteredFlavors
 }
 
-func filterV2FlavorByAllowedRole(flavors []dbaas_v2.FlavorResponse, allowedRole string) []dbaas_v2.FlavorResponse {
+func filterDBaaSV2FlavorByAllowedRole(flavors []dbaas_v2.FlavorResponse, allowedRole string) []dbaas_v2.FlavorResponse {
 	if allowedRole == "" {
 		return flavors
 	}

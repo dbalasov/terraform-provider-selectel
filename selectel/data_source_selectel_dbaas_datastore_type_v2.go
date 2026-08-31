@@ -9,9 +9,9 @@ import (
 	dbaas_v2 "github.com/selectel/dbaas-go/v2/common"
 )
 
-func dataSourceDBaaSDatastoreTypeV2() *schema.Resource {
+func dataSourceDBaaSV2DatastoreType() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: dataSourceDBaaSDatastoreTypeV2Read,
+		ReadContext: dataSourceDBaaSV2DatastoreTypeRead,
 		Schema: map[string]*schema.Schema{
 			"project_id": {
 				Type:     schema.TypeString,
@@ -61,7 +61,7 @@ func dataSourceDBaaSDatastoreTypeV2() *schema.Resource {
 	}
 }
 
-func dataSourceDBaaSDatastoreTypeV2Read(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
+func dataSourceDBaaSV2DatastoreTypeRead(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	dbaasClient, diagErr := getDBaaSV2Client(d, meta)
 	if diagErr != nil {
 		return diagErr
@@ -89,8 +89,8 @@ func dataSourceDBaaSDatastoreTypeV2Read(ctx context.Context, d *schema.ResourceD
 		return diag.FromErr(err)
 	}
 
-	datastoreTypes = filterV2DatastoreTypesByEngine(datastoreTypes, filter.engine)
-	datastoreTypes = filterV2DatastoreTypesByVersion(datastoreTypes, filter.version)
+	datastoreTypes = filterDBaaSV2DatastoreTypesByEngine(datastoreTypes, filter.engine)
+	datastoreTypes = filterDBaaSV2DatastoreTypesByVersion(datastoreTypes, filter.version)
 
 	datastoreTypesFlatten := flattenDBaaSV2DatastoreTypes(datastoreTypes)
 	if err := d.Set("datastore_types", datastoreTypesFlatten); err != nil {
@@ -105,7 +105,7 @@ func dataSourceDBaaSDatastoreTypeV2Read(ctx context.Context, d *schema.ResourceD
 	return nil
 }
 
-func filterV2DatastoreTypesByVersion(datastoreTypes []dbaas_v2.DatastoreTypeResponse, version string) []dbaas_v2.DatastoreTypeResponse {
+func filterDBaaSV2DatastoreTypesByVersion(datastoreTypes []dbaas_v2.DatastoreTypeResponse, version string) []dbaas_v2.DatastoreTypeResponse {
 	if version == "" {
 		return datastoreTypes
 	}
@@ -120,7 +120,7 @@ func filterV2DatastoreTypesByVersion(datastoreTypes []dbaas_v2.DatastoreTypeResp
 	return filteredDatastoreTypes
 }
 
-func filterV2DatastoreTypesByEngine(datastoreTypes []dbaas_v2.DatastoreTypeResponse, engine string) []dbaas_v2.DatastoreTypeResponse {
+func filterDBaaSV2DatastoreTypesByEngine(datastoreTypes []dbaas_v2.DatastoreTypeResponse, engine string) []dbaas_v2.DatastoreTypeResponse {
 	if engine == "" {
 		return datastoreTypes
 	}

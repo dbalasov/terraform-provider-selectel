@@ -72,8 +72,17 @@ func dbaasDatastoreV1StateRefreshFunc(ctx context.Context, client *dbaas.API, da
 	}
 }
 
-func WaitForDBaaSDatastoreV2RunningActive(
-	ctx context.Context, client *dbaas_v2.API, datastoreID string, timeout time.Duration,
+type DBaaSV2DatastoreResponse interface {
+	GetState() string
+	GetStatus() string
+}
+
+type DBaaSV2DatastoreGetter[D DBaaSV2DatastoreResponse] interface {
+	GetDatastore(ctx context.Context, datastoreID string) (D, error)
+}
+
+func WaitForDBaaSV2DatastoreRunningActive[D DBaaSV2DatastoreResponse](
+	ctx context.Context, client DBaaSV2DatastoreGetter[D], datastoreID string, timeout time.Duration,
 ) error {
 	pending := []string{
 		"UNKNOWN/CREATING",
@@ -87,7 +96,7 @@ func WaitForDBaaSDatastoreV2RunningActive(
 	stateConf := &retry.StateChangeConf{
 		Pending:    pending,
 		Target:     target,
-		Refresh:    dbaasDatastoreV2StateRefreshFunc(ctx, client, datastoreID),
+		Refresh:    dbaasV2DatastoreStateRefreshFunc(ctx, client, datastoreID),
 		Timeout:    timeout,
 		Delay:      10 * time.Second,
 		MinTimeout: 20 * time.Second,
@@ -103,28 +112,28 @@ func WaitForDBaaSDatastoreV2RunningActive(
 	return nil
 }
 
-func dbaasDatastoreV2StateRefreshFunc(ctx context.Context, client *dbaas_v2.API, datastoreID string) retry.StateRefreshFunc {
+func dbaasV2DatastoreStateRefreshFunc[D DBaaSV2DatastoreResponse](ctx context.Context, client DBaaSV2DatastoreGetter[D], datastoreID string) retry.StateRefreshFunc {
 	// Need to get engine or instead clien get interface with Get method
 	return func() (any, string, error) {
-		d, err := client.ClickHouse.GetDatastore(ctx, datastoreID)
+		d, err := client.GetDatastore(ctx, datastoreID)
 		if err != nil {
 			return nil, "", err
 		}
 
-		combinedStatus := fmt.Sprintf("%s/%s", d.State, d.Status)
+		combinedStatus := fmt.Sprintf("%s/%s", d.GetState(), d.GetStatus())
 
 		return d, combinedStatus, nil
 	}
 }
 
-func WaitForDBaaSDatastoreV2Deleted(
-	ctx context.Context, client *dbaas_v2.API, datastoreID string, timeout time.Duration,
+func WaitForDBaaSV2DatastoreDeleted[D DBaaSV2DatastoreResponse](
+	ctx context.Context, client DBaaSV2DatastoreGetter[D], datastoreID string, timeout time.Duration,
 ) error {
 
 	stateConf := &retry.StateChangeConf{
 		Pending:    []string{strconv.Itoa(http.StatusOK)},
 		Target:     []string{strconv.Itoa(http.StatusNotFound)},
-		Refresh:    DBaaSDatastoreV2DeleteStateRefreshFunc(ctx, client, datastoreID),
+		Refresh:    dbaasV2DatastoreDeleteStateRefreshFunc(ctx, client, datastoreID),
 		Timeout:    timeout,
 		Delay:      10 * time.Second,
 		MinTimeout: 15 * time.Second,
@@ -139,9 +148,9 @@ func WaitForDBaaSDatastoreV2Deleted(
 
 	return nil
 }
-func DBaaSDatastoreV2DeleteStateRefreshFunc(ctx context.Context, client *dbaas_v2.API, datastoreID string) retry.StateRefreshFunc {
+func dbaasV2DatastoreDeleteStateRefreshFunc[D DBaaSV2DatastoreResponse](ctx context.Context, client DBaaSV2DatastoreGetter[D], datastoreID string) retry.StateRefreshFunc {
 	return func() (any, string, error) {
-		d, err := client.ClickHouse.GetDatastore(ctx, datastoreID)
+		d, err := client.GetDatastore(ctx, datastoreID)
 		if err != nil {
 			var dbaasError *dbaas_v2.DBaaSAPIError
 			if errors.As(err, &dbaasError) {

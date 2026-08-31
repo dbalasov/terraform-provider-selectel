@@ -12,7 +12,7 @@ import (
 	"github.com/selectel/go-selvpcclient/v4/selvpcclient/resell/v2/projects"
 )
 
-func TestAccDBaaSDatastoreTypesV2Basic(t *testing.T) {
+func TestAccDBaaSV2DatastoreTypesBasic(t *testing.T) {
 	var (
 		dbaasDatastoreTypes []dbaas_v2.DatastoreTypeResponse
 		project             projects.Project
@@ -28,10 +28,10 @@ func TestAccDBaaSDatastoreTypesV2Basic(t *testing.T) {
 		CheckDestroy:      testAccCheckVPCV2ProjectDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccDBaaSDatastoreTypesV2Basic(projectName, datastoreTypeEngine, datastoreTypeVersion),
+				Config: testAccDBaaSV2DatastoreTypesBasic(projectName, datastoreTypeEngine, datastoreTypeVersion),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckVPCV2ProjectExists("selectel_vpc_project_v2.project_tf_acc_test_1", &project),
-					testAccDBaaSDatastoreTypesV2Exists("data.selectel_dbaas_datastore_type_v2.datastore_type_tf_acc_test_1", &dbaasDatastoreTypes),
+					testAccDBaaSV2DatastoreTypesExists("data.selectel_dbaas_datastore_type_v2.datastore_type_tf_acc_test_1", &dbaasDatastoreTypes),
 					resource.TestCheckResourceAttr("data.selectel_dbaas_datastore_type_v2.datastore_type_tf_acc_test_1", "datastore_types.0.engine", datastoreTypeEngine),
 					resource.TestCheckResourceAttr("data.selectel_dbaas_datastore_type_v2.datastore_type_tf_acc_test_1", "datastore_types.0.version", datastoreTypeVersion),
 				),
@@ -40,7 +40,7 @@ func TestAccDBaaSDatastoreTypesV2Basic(t *testing.T) {
 	})
 }
 
-func testAccDBaaSDatastoreTypesV2Exists(n string, dbaasDatastoreTypes *[]dbaas_v2.DatastoreTypeResponse) resource.TestCheckFunc {
+func testAccDBaaSV2DatastoreTypesExists(n string, dbaasDatastoreTypes *[]dbaas_v2.DatastoreTypeResponse) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
@@ -65,7 +65,7 @@ func testAccDBaaSDatastoreTypesV2Exists(n string, dbaasDatastoreTypes *[]dbaas_v
 	}
 }
 
-func testAccDBaaSDatastoreTypesV2Basic(projectName, engine, version string) string {
+func testAccDBaaSV2DatastoreTypesBasic(projectName, engine, version string) string {
 	return fmt.Sprintf(`
 resource "selectel_vpc_project_v2" "project_tf_acc_test_1" {
   name        = "%s"
