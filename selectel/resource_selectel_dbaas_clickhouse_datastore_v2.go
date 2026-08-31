@@ -119,6 +119,7 @@ func resourceDBaaSClickhouseDatastoreV2Read(ctx context.Context, d *schema.Resou
 		log.Print(errSettingComplexAttr("node_groups", err))
 	}
 
+	// TODO: convert by getting params and use its type
 	configMap := make(map[string]string)
 	for key, value := range datastore.Config {
 		configMap[key] = convertFieldToStringByType(value)

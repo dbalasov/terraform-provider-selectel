@@ -79,15 +79,22 @@ func validateDatastoreTypeV2(ctx context.Context, expectedDatastoreTypeEngines [
 }
 
 func flattenDBaaSDatastoreV2ClickhouseNodeGroups(nodeGroups []dbaas_v2_ch.NodeGroupResponse) []any {
+
+	// sort.Slice(nodeGroups, func(i, j int) bool {
+	// 	return nodeGroups[i].Name < nodeGroups[j].Name
+	// })
+
 	flattenedNodeGroups := make([]any, len(nodeGroups))
 
 	for i, ng := range nodeGroups {
 		flattenedNG := map[string]any{
-			"id":         ng.ID,
-			"name":       ng.Name,
-			"role":       ng.Role,
-			"node_count": ng.NodeCount,
-			"flavor":     flattenDBaasDatastoreV2ClickhouseNodeGroupFlavor(ng.Flavor),
+			"id":             ng.ID,
+			"name":           ng.Name,
+			"role":           ng.Role,
+			"node_count":     ng.NodeCount,
+			"weight":         ng.Weight,
+			"has_public_ips": ng.HasPublicIPs,
+			"flavor":         flattenDBaasDatastoreV2ClickhouseNodeGroupFlavor(ng.Flavor),
 		}
 		flattenedNodeGroups[i] = flattenedNG
 	}
@@ -95,14 +102,25 @@ func flattenDBaaSDatastoreV2ClickhouseNodeGroups(nodeGroups []dbaas_v2_ch.NodeGr
 	return flattenedNodeGroups
 }
 
-func flattenDBaasDatastoreV2ClickhouseNodeGroupFlavor(f dbaas_v2_ch.FlavorResponse) map[string]any {
-	return map[string]any{
-		"id":        f.ID,
-		"type":      f.Type,
-		"disk":      f.Disk,
-		"ram":       f.RAM,
-		"vcpus":     f.VCPUs,
-		"disk_type": f.DiskType,
+func flattenDBaasDatastoreV2ClickhouseNodeGroupFlavor(f dbaas_v2_ch.FlavorResponse) []any {
+
+	if f.Type == dbaas_v2_common.FlavorTypeFlexible {
+		return []any{
+			map[string]any{
+				"type":      f.Type,
+				"disk":      f.Disk,
+				"ram":       f.RAM,
+				"vcpus":     f.VCPUs,
+				"disk_type": f.DiskType,
+			},
+		}
+	} else {
+		return []any{
+			map[string]any{
+				"id":   f.ID,
+				"type": f.Type,
+			},
+		}
 	}
 }
 
@@ -145,7 +163,7 @@ func expandDBaasDatastoreV2ClickhouseNodeGroupFlavor(raw any) dbaas_v2_ch.Flavor
 	}
 
 	data := flavors[0].(map[string]any)
-	diskType := data["type"].(string)
+	diskType := data["disk_type"].(string)
 	flavorType := data["type"].(string)
 
 	if flavorType == string(dbaas_v2_common.FlavorTypeFIXED) && diskType == "" {

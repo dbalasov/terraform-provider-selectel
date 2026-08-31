@@ -7,12 +7,6 @@ import (
 	dbaas_v2_common "github.com/selectel/dbaas-go/v2/common"
 )
 
-func hashСlickhouseNodeGroup(v interface{}) int {
-	group := v.(map[string]interface{})
-
-	return schema.HashString(group["name"].(string))
-}
-
 func resourceDBaaSClickhouseDatastoreV2Schema() map[string]*schema.Schema {
 	datastoreSchema := resourceDBaaSDatastoreV2BaseSchema()
 
@@ -24,8 +18,7 @@ func resourceDBaaSClickhouseDatastoreV2Schema() map[string]*schema.Schema {
 	}
 
 	datastoreSchema["node_groups"] = &schema.Schema{
-		Type: schema.TypeList,
-		// Set:      hashСlickhouseNodeGroup,
+		Type:     schema.TypeList,
 		Required: true,
 
 		Elem: &schema.Resource{
