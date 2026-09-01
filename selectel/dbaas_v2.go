@@ -196,7 +196,7 @@ func expandDBaaSV2ClickhouseDatastoreLogPlatform(raw any) (dbaas_v2_ch.Datastore
 
 	logPlatform := raw.([]any)
 	if len(logPlatform) == 0 {
-		return res, fmt.Errorf("log_group is not set")
+		return res, errors.New("log_group is not set")
 	}
 
 	logGroup := logPlatform[0].(map[string]any)
