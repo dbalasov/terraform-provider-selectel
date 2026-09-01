@@ -139,6 +139,7 @@ func Provider(providerVersion string) *schema.Provider {
 			"selectel_dbaas_datastore_type_v2":          dataSourceDBaaSV2DatastoreType(),
 			"selectel_dbaas_available_extension_v1":     dataSourceDBaaSAvailableExtensionV1(),
 			"selectel_dbaas_flavor_v1":                  dataSourceDBaaSFlavorV1(),
+			"selectel_dbaas_flavor_v2":                  dataSourceDBaaSV2Flavor(),
 			"selectel_dbaas_configuration_parameter_v1": dataSourceDBaaSConfigurationParameterV1(),
 			"selectel_dbaas_prometheus_metric_token_v1": dataSourceDBaaSPrometheusMetricTokenV1(),
 			"selectel_mks_kubeconfig_v1":                dataSourceMKSKubeconfigV1(),
