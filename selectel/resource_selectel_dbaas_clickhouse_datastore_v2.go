@@ -3,12 +3,16 @@ package selectel
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	dbaas_v2 "github.com/selectel/dbaas-go/v2"
 	dbaas_v2_ch "github.com/selectel/dbaas-go/v2/clickhouse"
+	dbaas_v2_common "github.com/selectel/dbaas-go/v2/common"
 	waiters "github.com/terraform-providers/terraform-provider-selectel/selectel/waiters/dbaas"
 )
 
@@ -18,6 +22,9 @@ func resourceDBaaSV2ClickhouseDatastore() *schema.Resource {
 		ReadContext:   resourceDBaaSV2ClickhouseDatastoreRead,
 		UpdateContext: resourceDBaaSV2ClickhouseDatastoreUpdate,
 		DeleteContext: resourceDBaaSV2ClickhouseDatastoreDelete,
+		CustomizeDiff: customdiff.All(
+			validateDBaaSV2ClickhouseDatastoreDiff,
+		),
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceDBaaSV2ClickhouseDatastoreImportState,
 		},
@@ -36,8 +43,42 @@ func resourceDBaaSV2ClickhouseDatastoreCreate(ctx context.Context, d *schema.Res
 		return diagErr
 	}
 
-	var datastoreCreateOpts dbaas_v2_ch.DatastoreCreateRequest
-	// TODO: // prepare datastoreCreateOpts
+	typeID := d.Get("type_id").(string)
+	diagErr = validateDBaaSV2DatastoreType(ctx, []string{clickhouseDatastoreType}, typeID, dbaasClient)
+	if diagErr != nil {
+		return diagErr
+	}
+
+	nodeGroups := expandDBaasV2ClickhouseNodeGroupsCreate(d.Get("node_groups").([]any))
+
+	datastoreCreateOpts := dbaas_v2_ch.DatastoreCreateRequest{
+		Name:       d.Get("name").(string),
+		TypeID:     typeID,
+		SubnetID:   d.Get("subnet_id").(string),
+		Password:   d.Get("password").(string),
+		Config:     d.Get("config").(map[string]any),
+		NodeGroups: nodeGroups,
+	}
+
+	// May be update to V2 (expand and error)
+	sgRaw, sgOk := d.GetOk("security_groups")
+	if sgOk {
+		sgSet := sgRaw.(*schema.Set)
+		sg, err := resourceDBaaSDatastoreV1SecurityGroupsFromSet(sgSet)
+		if err != nil {
+			return diag.FromErr(errParseDatastoreV1SecurityGroups(err))
+		}
+		datastoreCreateOpts.SecurityGroups = sg
+	}
+
+	logPlatform, logOk := d.GetOk("log_platform")
+	if logOk {
+		log, err := expandDBaaSV2ClickhouseDatastoreLogPlatform(logPlatform)
+		if err != nil {
+			return diag.FromErr(errParseDatastoreV2LogPlatform(err))
+		}
+		datastoreCreateOpts.LogPlatform = &log
+	}
 
 	log.Print(msgCreate(objectDatastore, datastoreCreateOpts))
 	datastore, err := dbaasClient.ClickHouse.CreateDatastore(ctx, datastoreCreateOpts)
@@ -68,24 +109,232 @@ func resourceDBaaSV2ClickhouseDatastoreRead(ctx context.Context, d *schema.Resou
 	if err != nil {
 		return diag.FromErr(errGettingObject(objectDatastore, d.Id(), err))
 	}
-
-	// TODO: Fill Set
 	d.Set("name", datastore.Name)
-	// Do other
+	d.Set("status", datastore.Status)
+	d.Set("state", datastore.State)
+	d.Set("project_id", datastore.ProjectID)
+	d.Set("subnet_id", datastore.SubnetID)
+	d.Set("type_id", datastore.TypeID)
+	d.Set("security_groups", datastore.SecurityGroups)
+
+	if datastore.LogPlatform.LogGroup != "" {
+		d.Set("log_platform", []any{
+			map[string]any{
+				"log_group": datastore.LogPlatform.LogGroup,
+			},
+		})
+	}
+
+	nodeGroups := flattenDBaaSV2DatastoreClickhouseNodeGroups(datastore.NodeGroups)
+	if err := d.Set("node_groups", nodeGroups); err != nil {
+		log.Print(errSettingComplexAttr("node_groups", err))
+	}
+
+	// TODO: convert by getting params and use its type
+	configMap := make(map[string]string)
+	for key, value := range datastore.Config {
+		configMap[key] = convertFieldToStringByType(value)
+	}
+	if err := d.Set("config", configMap); err != nil {
+		log.Print(errSettingComplexAttr("config", err))
+	}
 
 	return nil
 }
 
 func resourceDBaaSV2ClickhouseDatastoreUpdate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
-	// dbaasClient, diagErr := getDBaaSV2Client(d, meta)
-	// if diagErr != nil {
-	// 	return diagErr
-	// }
-	// timeout := d.Timeout(schema.TimeoutUpdate)
+	dbaasClient, diagErr := getDBaaSV2Client(d, meta)
+	if diagErr != nil {
+		return diagErr
+	}
+	timeout := d.Timeout(schema.TimeoutUpdate)
 
-	// TODO: check d.HaseChange for params and update them
+	if d.HasChange("name") {
+		if err := updateDBaaSV2ClickhouseDatastoreName(ctx, d, dbaasClient); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	if d.HasChange("password") {
+		if err := updateDBaaSV2ClickhouseDatastorePassword(ctx, d, dbaasClient); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	if d.HasChange("node_groups") {
+		oldRaw, newRaw := d.GetChange("node_groups")
+
+		oldGroups := oldRaw.([]any)
+		newGroups := newRaw.([]any)
+
+		if err := reconcileDBaaSV2ClickhouseNodeGroups(
+			ctx,
+			dbaasClient,
+			d.Id(),
+			oldGroups,
+			newGroups,
+			timeout,
+		); err != nil {
+			return diag.FromErr(err)
+		}
+
+	}
+	if d.HasChange("config") {
+		// Update config
+	}
+
+	if d.HasChange("security_groups") {
+		if err := updateDBaaSV2ClickhouseDatastoreSecurityGroups(ctx, d, dbaasClient); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	if d.HasChange("log_platform") {
+		if err := updateDBaaSV2ClickhouseDatastoreLogPlatform(ctx, d, dbaasClient); err != nil {
+			return diag.FromErr(err)
+		}
+	}
 
 	return resourceDBaaSV2ClickhouseDatastoreRead(ctx, d, meta)
+}
+
+func reconcileDBaaSV2ClickhouseNodeGroups(
+	ctx context.Context,
+	client *dbaas_v2.API,
+	datastoreID string,
+	oldGroups []any,
+	newGroups []any,
+	timeout time.Duration,
+) error {
+
+	oldByName := make(map[string]map[string]any)
+
+	for _, raw := range oldGroups {
+		group := raw.(map[string]any)
+		oldByName[group["name"].(string)] = group
+	}
+
+	newByName := make(map[string]map[string]any)
+
+	for _, raw := range newGroups {
+		group := raw.(map[string]any)
+		newByName[group["name"].(string)] = group
+	}
+
+	// Create / update.
+	for name, newGroup := range newByName {
+		oldGroup, exists := oldByName[name]
+
+		if !exists {
+			if err := createDBaaSV2ClickhouseNodeGroup(
+				ctx, client, datastoreID, newGroup, timeout,
+			); err != nil {
+				return fmt.Errorf("creating node group error: %w", err)
+			}
+			continue
+		}
+
+		oldID := oldGroup["id"].(string)
+
+		if err := reconcileDBaaSV2ClickhouseNodeGroup(
+			ctx, client, datastoreID, oldID, oldGroup, newGroup, timeout,
+		); err != nil {
+			return fmt.Errorf("reconciliation node group error: %w", err)
+		}
+	}
+
+	// Delete.
+	for name, oldGroup := range oldByName {
+
+		if _, exists := newByName[name]; exists {
+			continue
+		}
+
+		oldID := oldGroup["id"].(string)
+
+		if err := deleteDBaaSV2ClickhouseNodeGroup(
+			ctx, client, datastoreID, oldID, timeout,
+		); err != nil {
+			return fmt.Errorf("deleting node group error: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func reconcileDBaaSV2ClickhouseNodeGroup(
+	ctx context.Context,
+	client *dbaas_v2.API,
+	datastoreID string,
+	nodeGroupID string,
+	oldGroup map[string]any,
+	newGroup map[string]any,
+	timeout time.Duration,
+) error {
+
+	// check resize
+	oldNodeCount := oldGroup["node_count"].(int)
+	newNodeCount := newGroup["node_count"].(int)
+
+	oldFlavor := expandDBaaSV2ClickhouseNodeGroupFlavor(oldGroup["flavor"])
+	newFlavor := expandDBaaSV2ClickhouseNodeGroupFlavor(newGroup["flavor"])
+
+	if oldNodeCount != newNodeCount || !equalDBaaSV2ClickhouseFlavor(oldFlavor, newFlavor) {
+		req := dbaas_v2_ch.NodeGroupResizeRequest{
+			NodeCount: newNodeCount,
+			Flavor:    newFlavor,
+		}
+		// TODO: Can not reduce node count by resizeDBaaSV2ClickhouseNodeGroup.
+		// Need another endpoint for deleting instances (what instance ids choose ?)
+		if newNodeCount < oldNodeCount {
+			// use client.ClickHosue.DeleteNodeGroupInstances
+		}
+
+		if err := resizeDBaaSV2ClickhouseNodeGroup(
+			ctx,
+			client,
+			datastoreID,
+			nodeGroupID,
+			req,
+			timeout,
+		); err != nil {
+			return fmt.Errorf("resizing node group error: %w", err)
+		}
+	}
+
+	// check fip
+	oldHasPublicIPs := oldGroup["has_public_ips"].(bool)
+	newHasPublicIPs := newGroup["has_public_ips"].(bool)
+	if oldHasPublicIPs != newHasPublicIPs {
+		if err := updateDBaaSV2ClickhouseNodeGroupPublicIPs(
+			ctx,
+			client,
+			datastoreID,
+			nodeGroupID,
+			newHasPublicIPs,
+			timeout,
+		); err != nil {
+			return fmt.Errorf("update node group public IPs error: %w", err)
+		}
+	}
+
+	// check weight
+	oldWeight := oldGroup["weight"].(int)
+	newWeight := newGroup["weight"].(int)
+	if oldWeight != newWeight {
+		if err := updateDBaaSV2ClickhouseNodeGroupWeight(
+			ctx,
+			client,
+			datastoreID,
+			nodeGroupID,
+			newWeight,
+			timeout,
+		); err != nil {
+			return fmt.Errorf("update node group weight error: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func resourceDBaaSV2ClickhouseDatastoreDelete(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
@@ -122,4 +371,144 @@ func resourceDBaaSV2ClickhouseDatastoreImportState(_ context.Context, d *schema.
 	d.Set("region", config.Region)
 
 	return []*schema.ResourceData{d}, nil
+}
+
+func validateDBaaSV2ClickhouseDatastoreDiff(
+	ctx context.Context,
+	diff *schema.ResourceDiff,
+	meta any,
+) error {
+	rawGroups, ok := diff.Get("node_groups").([]any)
+	if !ok {
+		return nil
+	}
+
+	for _, rawGroup := range rawGroups {
+		group := rawGroup.(map[string]any)
+
+		if err := validateDBaaSV2ClickHouseNodeGroup(group); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func validateDBaaSV2ClickHouseNodeGroup(group map[string]any) error {
+	role := group["role"].(string)
+	hasPublicIPs := group["has_public_ips"].(bool)
+	weight := group["weight"].(int)
+	nodeCount := group["node_count"].(int)
+
+	if nodeCount < 1 {
+		return fmt.Errorf("node group %q with node count < 1", group["name"])
+	}
+
+	switch role {
+	case string(dbaas_v2_ch.NodeGroupRoleData):
+		if weight <= 0 {
+			return fmt.Errorf(
+				"node group %q with role DATA must have weight > 0",
+				group["name"],
+			)
+		}
+
+	case string(dbaas_v2_ch.NodeGroupRoleKeeper):
+		if hasPublicIPs {
+			return fmt.Errorf(
+				"node group %q with role KEEPER cannot have public IPs",
+				group["name"],
+			)
+		}
+
+		if weight > 0 {
+			return fmt.Errorf(
+				"node group %q with role KEEPER cannot have weight > 0",
+				group["name"],
+			)
+		}
+	}
+
+	if err := validateDBaaSV2ClickHouseNodeGroupFlavor(group); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func validateDBaaSV2ClickHouseNodeGroupFlavor(group map[string]any) error {
+	rawFlavors := group["flavor"].([]any)
+	if len(rawFlavors) == 0 {
+		return nil
+	}
+
+	flavor := rawFlavors[0].(map[string]any)
+
+	flavorType := flavor["type"].(string)
+
+	switch flavorType {
+	case string(dbaas_v2_common.FlavorTypeFIXED):
+		if flavor["id"].(string) == "" {
+			return fmt.Errorf(
+				"flavor.id is required for FIXED flavor",
+			)
+		}
+
+		if flavor["disk"].(int) != 0 ||
+			flavor["ram"].(int) != 0 ||
+			flavor["vcpus"].(int) != 0 {
+			return fmt.Errorf(
+				"FIXED flavor cannot specify disk, ram or vcpus",
+			)
+		}
+
+		if flavor["disk_type"].(string) != "" {
+			return fmt.Errorf(
+				"flavor.disk_type cannot be specified for FIXED flavor",
+			)
+		}
+
+	case string(dbaas_v2_common.FlavorTypeFlexible):
+		if flavor["id"].(string) != "" {
+			return fmt.Errorf(
+				"flavor.id cannot be specified for FLEXIBLE flavor",
+			)
+		}
+
+		if flavor["disk"].(int) <= 0 ||
+			flavor["ram"].(int) <= 0 ||
+			flavor["vcpus"].(int) <= 0 {
+			return fmt.Errorf(
+				"disk, ram and vcpus must be greater than 0 for FLEXIBLE flavor",
+			)
+		}
+
+		if flavor["disk_type"].(string) == "" {
+			return fmt.Errorf(
+				"flavor.disk_type is required for FLEXIBLE flavor",
+			)
+		}
+	}
+
+	return nil
+}
+
+func equalDBaaSV2ClickhouseFlavor(a, b dbaas_v2_ch.FlavorForNodeGroupRequest) bool {
+	if a.Type != b.Type {
+		return false
+	}
+
+	switch a.Type {
+	case dbaas_v2_common.FlavorTypeFIXED:
+		return a.ID == b.ID
+
+	case dbaas_v2_common.FlavorTypeFlexible:
+		return a.Disk == b.Disk &&
+			a.RAM == b.RAM &&
+			a.VCPUs == b.VCPUs &&
+			a.DiskType == b.DiskType
+
+	default:
+		return false
+	}
 }
