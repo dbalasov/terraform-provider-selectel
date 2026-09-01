@@ -313,9 +313,9 @@ func createDBaaSV2ClickhouseNodeGroup(
 	timeout time.Duration,
 ) error {
 	createOpts := expandDBaaSV2ClickhouseNodeGroupCreate(nodeGroupData)
-	extaMsg := fmt.Sprintf("create node group %+v", createOpts)
+	extraMsg := fmt.Sprintf("create node group %+v", createOpts)
 
-	log.Print(msgUpdate(objectDatastore, datastoreID, extaMsg))
+	log.Print(msgUpdate(objectDatastore, datastoreID, extraMsg))
 	_, err := client.ClickHouse.CreateNodeGroup(ctx, datastoreID, createOpts)
 	if err != nil {
 		return errUpdatingObject(objectDatastore, datastoreID, err)
@@ -337,8 +337,8 @@ func deleteDBaaSV2ClickhouseNodeGroup(
 	nodeGroupID string,
 	timeout time.Duration,
 ) error {
-	extaMsg := fmt.Sprintf("delete node group %s", nodeGroupID)
-	log.Print(msgUpdate(objectDatastore, datastoreID, extaMsg))
+	extraMsg := fmt.Sprintf("delete node group %s", nodeGroupID)
+	log.Print(msgUpdate(objectDatastore, datastoreID, extraMsg))
 	err := client.ClickHouse.DeleteNodeGroup(ctx, datastoreID, nodeGroupID)
 	if err != nil {
 		return errUpdatingObject(objectDatastore, datastoreID, err)
@@ -361,9 +361,9 @@ func resizeDBaaSV2ClickhouseNodeGroup(
 	resizeData dbaas_v2_ch.NodeGroupResizeRequest,
 	timeout time.Duration,
 ) error {
-	extaMsg := fmt.Sprintf("resize node group %s: %+v", nodeGroupID, resizeData)
+	extraMsg := fmt.Sprintf("resize node group %s: %+v", nodeGroupID, resizeData)
 
-	log.Print(msgUpdate(objectDatastore, datastoreID, extaMsg))
+	log.Print(msgUpdate(objectDatastore, datastoreID, extraMsg))
 
 	_, err := client.ClickHouse.ResizeNodeGroup(ctx, datastoreID, nodeGroupID, resizeData)
 	if err != nil {
@@ -390,9 +390,9 @@ func updateDBaaSV2ClickhouseNodeGroupPublicIPs(
 	updateOpts := dbaas_v2_ch.NodeGroupUpdateFloatingIPsRequest{
 		HasPublicIPs: hasPublicIPs,
 	}
-	extaMsg := fmt.Sprintf("update public IPs for node group %s: %+v", nodeGroupID, updateOpts)
+	extraMsg := fmt.Sprintf("update public IPs for node group %s: %+v", nodeGroupID, updateOpts)
 
-	log.Print(msgUpdate(objectDatastore, datastoreID, extaMsg))
+	log.Print(msgUpdate(objectDatastore, datastoreID, extraMsg))
 
 	_, err := client.ClickHouse.UpdateNodeGroupFloatingIPs(ctx, datastoreID, nodeGroupID, updateOpts)
 	if err != nil {
@@ -419,9 +419,9 @@ func updateDBaaSV2ClickhouseNodeGroupWeight(
 	updateOpts := dbaas_v2_ch.NodeGroupUpdateWeightRequest{
 		Weight: weight,
 	}
-	extaMsg := fmt.Sprintf("update weight for node group %s: %+v", nodeGroupID, updateOpts)
+	extraMsg := fmt.Sprintf("update weight for node group %s: %+v", nodeGroupID, updateOpts)
 
-	log.Print(msgUpdate(objectDatastore, datastoreID, extaMsg))
+	log.Print(msgUpdate(objectDatastore, datastoreID, extraMsg))
 
 	_, err := client.ClickHouse.UpdateNodeGroupWeight(ctx, datastoreID, nodeGroupID, updateOpts)
 	if err != nil {
