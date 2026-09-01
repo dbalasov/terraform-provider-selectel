@@ -184,8 +184,11 @@ func resourceDBaaSV2ClickhouseDatastoreUpdate(ctx context.Context, d *schema.Res
 	}
 
 	if d.HasChange("security_groups") {
-		// Update security_groups
+		if err := updateDBaaSV2ClickhouseDatastoreSecurityGroups(ctx, d, dbaasClient); err != nil {
+			return diag.FromErr(err)
+		}
 	}
+
 	if d.HasChange("log_platform") {
 		if err := updateDBaaSV2ClickhouseDatastoreLogPlatform(ctx, d, dbaasClient); err != nil {
 			return diag.FromErr(err)

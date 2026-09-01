@@ -275,6 +275,36 @@ func updateDBaaSV2ClickhouseDatastoreLogPlatform(ctx context.Context, d *schema.
 	return nil
 }
 
+func updateDBaaSV2ClickhouseDatastoreSecurityGroups(ctx context.Context, d *schema.ResourceData, client *dbaas_v2.API) error {
+	rawSG := d.Get("security_groups")
+
+	securityGroupsSet := rawSG.(*schema.Set)
+	// may be use v2 expand
+	securityGroups, err := resourceDBaaSDatastoreV1SecurityGroupsFromSet(securityGroupsSet)
+	if err != nil {
+		return errParseDatastoreV1SecurityGroups(err)
+	}
+
+	updateOpts := dbaas_v2_ch.DatastoreSecurityGroupsRequest{
+		SecurityGroups: securityGroups,
+	}
+
+	log.Print(msgUpdate(objectDatastore, d.Id(), updateOpts))
+
+	if _, err := client.ClickHouse.UpdateDatastoreSecurityGroups(ctx, d.Id(), updateOpts); err != nil {
+		return errUpdatingObject(objectDatastore, d.Id(), err)
+	}
+
+	log.Printf("[DEBUG] waiting for datastore %s to become 'ACTIVE'", d.Id())
+	timeout := d.Timeout(schema.TimeoutUpdate)
+	err = waiters.WaitForDBaaSV2DatastoreRunningActive(ctx, client.ClickHouse, d.Id(), timeout)
+	if err != nil {
+		return errUpdatingObject(objectDatastore, d.Id(), err)
+	}
+
+	return nil
+}
+
 func createDBaaSV2ClickhouseNodeGroup(
 	ctx context.Context,
 	client *dbaas_v2.API,
