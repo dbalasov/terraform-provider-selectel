@@ -116,6 +116,34 @@ func dbaasV2ClickhouseNodeGroupSchema() map[string]*schema.Schema {
 			Type:     schema.TypeString,
 			Computed: true,
 		},
+		"instances": {
+			Type:     schema.TypeList,
+			Computed: true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					"id": {
+						Type:     schema.TypeString,
+						Computed: true,
+					},
+					"ip": {
+						Type:     schema.TypeString,
+						Computed: true,
+					},
+					"floating_ip": {
+						Type:     schema.TypeString,
+						Computed: true,
+					},
+					"availability_zone": {
+						Type:     schema.TypeString,
+						Computed: true,
+					},
+					"hostname": {
+						Type:     schema.TypeString,
+						Computed: true,
+					},
+				},
+			},
+		},
 	}
 }
 

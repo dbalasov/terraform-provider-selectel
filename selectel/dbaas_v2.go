@@ -81,8 +81,20 @@ func validateDBaaSV2DatastoreType(ctx context.Context, expectedDatastoreTypeEngi
 func flattenDBaaSV2DatastoreClickhouseNodeGroups(nodeGroups []dbaas_v2_ch.NodeGroupResponse) []any {
 
 	flattenedNodeGroups := make([]any, len(nodeGroups))
-
 	for i, ng := range nodeGroups {
+
+		flattenedInstances := make([]any, len(ng.Instances))
+		for j, instance := range ng.Instances {
+			flattenedInstance := map[string]any{
+				"id":                instance.ID,
+				"ip":                instance.IP,
+				"floating_ip":       instance.FloatingIP,
+				"availability_zone": instance.AvailabilityZone,
+				"hostname":          instance.Hostname,
+			}
+			flattenedInstances[j] = flattenedInstance
+		}
+
 		flattenedNG := map[string]any{
 			"id":             ng.ID,
 			"name":           ng.Name,
@@ -92,7 +104,9 @@ func flattenDBaaSV2DatastoreClickhouseNodeGroups(nodeGroups []dbaas_v2_ch.NodeGr
 			"has_public_ips": ng.HasPublicIPs,
 			"status":         ng.Status,
 			"flavor":         flattenDBaaSV2DatastoreClickhouseNodeGroupFlavor(ng.Flavor),
+			"instances":      flattenedInstances,
 		}
+
 		flattenedNodeGroups[i] = flattenedNG
 	}
 
@@ -293,7 +307,6 @@ func deleteDBaaSV2ClickhouseNodeGroup(
 	nodeGroupID string,
 	timeout time.Duration,
 ) error {
-
 	extaMsg := fmt.Sprintf("delete node group %s", nodeGroupID)
 	log.Print(msgUpdate(objectDatastore, datastoreID, extaMsg))
 	err := client.ClickHouse.DeleteNodeGroup(ctx, datastoreID, nodeGroupID)
@@ -323,6 +336,64 @@ func resizeDBaaSV2ClickhouseNodeGroup(
 	log.Print(msgUpdate(objectDatastore, datastoreID, extaMsg))
 
 	_, err := client.ClickHouse.ResizeNodeGroup(ctx, datastoreID, nodeGroupID, resizeData)
+	if err != nil {
+		return errUpdatingObject(objectDatastore, datastoreID, err)
+	}
+
+	log.Printf("[DEBUG] waiting for datastore %s to become 'ACTIVE'", datastoreID)
+	err = waiters.WaitForDBaaSV2DatastoreRunningActive(ctx, client.ClickHouse, datastoreID, timeout)
+	if err != nil {
+		return errUpdatingObject(objectDatastore, datastoreID, err)
+	}
+
+	return nil
+}
+
+func updateDBaaSV2ClickhouseNodeGroupPublicIPs(
+	ctx context.Context,
+	client *dbaas_v2.API,
+	datastoreID string,
+	nodeGroupID string,
+	hasPublicIPs bool,
+	timeout time.Duration,
+) error {
+	updateOpts := dbaas_v2_ch.NodeGroupUpdateFloatingIPsRequest{
+		HasPublicIPs: hasPublicIPs,
+	}
+	extaMsg := fmt.Sprintf("update public IPs for node group %s: %+v", nodeGroupID, updateOpts)
+
+	log.Print(msgUpdate(objectDatastore, datastoreID, extaMsg))
+
+	_, err := client.ClickHouse.UpdateNodeGroupFloatingIPs(ctx, datastoreID, nodeGroupID, updateOpts)
+	if err != nil {
+		return errUpdatingObject(objectDatastore, datastoreID, err)
+	}
+
+	log.Printf("[DEBUG] waiting for datastore %s to become 'ACTIVE'", datastoreID)
+	err = waiters.WaitForDBaaSV2DatastoreRunningActive(ctx, client.ClickHouse, datastoreID, timeout)
+	if err != nil {
+		return errUpdatingObject(objectDatastore, datastoreID, err)
+	}
+
+	return nil
+}
+
+func updateDBaaSV2ClickhouseNodeGroupWeight(
+	ctx context.Context,
+	client *dbaas_v2.API,
+	datastoreID string,
+	nodeGroupID string,
+	weight int,
+	timeout time.Duration,
+) error {
+	updateOpts := dbaas_v2_ch.NodeGroupUpdateWeightRequest{
+		Weight: weight,
+	}
+	extaMsg := fmt.Sprintf("update weight for node group %s: %+v", nodeGroupID, updateOpts)
+
+	log.Print(msgUpdate(objectDatastore, datastoreID, extaMsg))
+
+	_, err := client.ClickHouse.UpdateNodeGroupWeight(ctx, datastoreID, nodeGroupID, updateOpts)
 	if err != nil {
 		return errUpdatingObject(objectDatastore, datastoreID, err)
 	}

@@ -16,7 +16,7 @@ import (
 	waiters "github.com/terraform-providers/terraform-provider-selectel/selectel/waiters/dbaas"
 )
 
-func resourceDBaaSClickhouseDatastoreV2() *schema.Resource {
+func resourceDBaaSV2ClickhouseDatastore() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceDBaaSV2ClickhouseDatastoreCreate,
 		ReadContext:   resourceDBaaSV2ClickhouseDatastoreRead,
@@ -268,6 +268,8 @@ func reconcileDBaaSV2ClickhouseNodeGroup(
 	newGroup map[string]any,
 	timeout time.Duration,
 ) error {
+
+	// check resize
 	oldNodeCount := oldGroup["node_count"].(int)
 	newNodeCount := newGroup["node_count"].(int)
 
@@ -279,6 +281,12 @@ func reconcileDBaaSV2ClickhouseNodeGroup(
 			NodeCount: newNodeCount,
 			Flavor:    newFlavor,
 		}
+		// TODO: Can not reduce node count by resizeDBaaSV2ClickhouseNodeGroup.
+		// Need another endpoint for deleting instances (what instance ids choose ?)
+		if newNodeCount < oldNodeCount {
+			// use client.ClickHosue.DeleteNodeGroupInstances
+		}
+
 		if err := resizeDBaaSV2ClickhouseNodeGroup(
 			ctx,
 			client,
@@ -292,7 +300,36 @@ func reconcileDBaaSV2ClickhouseNodeGroup(
 	}
 
 	// check fip
+	oldHasPublicIPs := oldGroup["has_public_ips"].(bool)
+	newHasPublicIPs := newGroup["has_public_ips"].(bool)
+	if oldHasPublicIPs != newHasPublicIPs {
+		if err := updateDBaaSV2ClickhouseNodeGroupPublicIPs(
+			ctx,
+			client,
+			datastoreID,
+			nodeGroupID,
+			newHasPublicIPs,
+			timeout,
+		); err != nil {
+			return fmt.Errorf("update node group public IPs error: %w", err)
+		}
+	}
+
 	// check weight
+	oldWeight := oldGroup["weight"].(int)
+	newWeight := newGroup["weight"].(int)
+	if oldWeight != newWeight {
+		if err := updateDBaaSV2ClickhouseNodeGroupWeight(
+			ctx,
+			client,
+			datastoreID,
+			nodeGroupID,
+			newWeight,
+			timeout,
+		); err != nil {
+			return fmt.Errorf("update node group weight error: %w", err)
+		}
+	}
 
 	return nil
 }
@@ -358,6 +395,11 @@ func validateDBaaSV2ClickHouseNodeGroup(group map[string]any) error {
 	role := group["role"].(string)
 	hasPublicIPs := group["has_public_ips"].(bool)
 	weight := group["weight"].(int)
+	nodeCount := group["node_count"].(int)
+
+	if nodeCount < 1 {
+		return fmt.Errorf("node group %q with node count < 1", group["name"])
+	}
 
 	switch role {
 	case string(dbaas_v2_ch.NodeGroupRoleData):
