@@ -449,7 +449,7 @@ func validateDBaaSV2ClickHouseNodeGroupFlavor(group map[string]any) error {
 	switch flavorType {
 	case string(dbaas_v2_common.FlavorTypeFIXED):
 		if flavor["id"].(string) == "" {
-			return fmt.Errorf(
+			return errors.New(
 				"flavor.id is required for FIXED flavor",
 			)
 		}
@@ -457,20 +457,20 @@ func validateDBaaSV2ClickHouseNodeGroupFlavor(group map[string]any) error {
 		if flavor["disk"].(int) != 0 ||
 			flavor["ram"].(int) != 0 ||
 			flavor["vcpus"].(int) != 0 {
-			return fmt.Errorf(
+			return errors.New(
 				"FIXED flavor cannot specify disk, ram or vcpus",
 			)
 		}
 
 		if flavor["disk_type"].(string) != "" {
-			return fmt.Errorf(
+			return errors.New(
 				"flavor.disk_type cannot be specified for FIXED flavor",
 			)
 		}
 
 	case string(dbaas_v2_common.FlavorTypeFlexible):
 		if flavor["id"].(string) != "" {
-			return fmt.Errorf(
+			return errors.New(
 				"flavor.id cannot be specified for FLEXIBLE flavor",
 			)
 		}
@@ -478,13 +478,13 @@ func validateDBaaSV2ClickHouseNodeGroupFlavor(group map[string]any) error {
 		if flavor["disk"].(int) <= 0 ||
 			flavor["ram"].(int) <= 0 ||
 			flavor["vcpus"].(int) <= 0 {
-			return fmt.Errorf(
+			return errors.New(
 				"disk, ram and vcpus must be greater than 0 for FLEXIBLE flavor",
 			)
 		}
 
 		if flavor["disk_type"].(string) == "" {
-			return fmt.Errorf(
+			return errors.New(
 				"flavor.disk_type is required for FLEXIBLE flavor",
 			)
 		}
