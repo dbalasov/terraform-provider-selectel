@@ -103,7 +103,7 @@ func flattenDBaaSV2DatastoreClickhouseNodeGroups(nodeGroups []dbaas_v2_ch.NodeGr
 			"weight":         ng.Weight,
 			"has_public_ips": ng.HasPublicIPs,
 			"status":         ng.Status,
-			"flavor":         flattenDBaaSV2DatastoreClickhouseNodeGroupFlavor(ng.Flavor),
+			"flavor":         flattenDBaaSV2ClickhouseNodeGroupFlavor(ng.Flavor),
 			"instances":      flattenedInstances,
 		}
 
@@ -113,7 +113,7 @@ func flattenDBaaSV2DatastoreClickhouseNodeGroups(nodeGroups []dbaas_v2_ch.NodeGr
 	return flattenedNodeGroups
 }
 
-func flattenDBaaSV2DatastoreClickhouseNodeGroupFlavor(f dbaas_v2_ch.FlavorResponse) []any {
+func flattenDBaaSV2ClickhouseNodeGroupFlavor(f dbaas_v2_ch.FlavorResponse) []any {
 
 	if f.Type == dbaas_v2_common.FlavorTypeFlexible {
 		return []any{
