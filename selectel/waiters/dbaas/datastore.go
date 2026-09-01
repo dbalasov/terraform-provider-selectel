@@ -113,7 +113,6 @@ func WaitForDBaaSV2DatastoreRunningActive[D DBaaSV2DatastoreResponse](
 }
 
 func dbaasV2DatastoreStateRefreshFunc[D DBaaSV2DatastoreResponse](ctx context.Context, client DBaaSV2DatastoreGetter[D], datastoreID string) retry.StateRefreshFunc {
-	// Need to get engine or instead clien get interface with Get method
 	return func() (any, string, error) {
 		d, err := client.GetDatastore(ctx, datastoreID)
 		if err != nil {

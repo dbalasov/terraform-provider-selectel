@@ -7,9 +7,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/selectel/dbaas-go"
+	dbaas_v2 "github.com/selectel/dbaas-go/v2"
 )
 
-func newTestDBaaSClient(_ context.Context, rs *terraform.ResourceState, testAccProvider *schema.Provider) (*dbaas.API, error) {
+func newTestDBaaSV2Client(_ context.Context, rs *terraform.ResourceState, testAccProvider *schema.Provider) (*dbaas_v2.API, error) {
 	config := testAccProvider.Meta().(*Config)
 
 	var projectID string
@@ -25,14 +26,14 @@ func newTestDBaaSClient(_ context.Context, rs *terraform.ResourceState, testAccP
 	}
 
 	if region, ok := rs.Primary.Attributes["region"]; ok {
-		dbaasEndpoint, err := selvpcClient.Catalog.GetEndpoint(DBaaS, region)
+		dbaasEndpoint, err := selvpcClient.Catalog.GetEndpoint(DBaaSv2, region)
 		if err != nil {
 			return nil, fmt.Errorf("can't get endpoint for dbaas acc tests: %w", err)
 		}
 		endpoint = dbaasEndpoint.URL
 	}
 
-	dbaasClient, err := dbaas.NewDBAASClient(selvpcClient.GetXAuthToken(), endpoint)
+	dbaasClient, err := dbaas.NewDBAASClientV2(selvpcClient.GetXAuthToken(), endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("can't get dbaas client for dbaas acc tests: %w", err)
 	}
