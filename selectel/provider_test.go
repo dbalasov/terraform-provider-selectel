@@ -27,6 +27,9 @@ var (
 	globalRouterSubnetServiceAddress2 = os.Getenv("GLOBAL_ROUTER_SUBNET_SERVICE_ADDR2")
 	globalRouterStaticRouteCidr       = os.Getenv("GLOBAL_ROUTER_STATIC_ROUTE_CIDR")
 	globalRouterNextHop               = os.Getenv("GLOBAL_ROUTER_STATIC_ROUTE_NEXT_HOP")
+	// dbaas Test env variables
+	dbaasRegion    = os.Getenv("DBAAS_REGION")
+	dbaasProjectID = os.Getenv("DBAAS_PROJECT_ID")
 )
 
 func init() {
@@ -177,5 +180,14 @@ func testAccGlobalRouterStaticRoutePreCheck(t *testing.T) {
 	}
 	if globalRouterNextHop == "" {
 		t.Skip("GLOBAL_ROUTER_STATIC_ROUTE_NEXT_HOP must be set for acceptance tests of Global Router static router in VPC subnet")
+	}
+}
+
+func testAccDBaaSV2PreCheck(t *testing.T) {
+	if dbaasRegion == "" {
+		t.Skip("DBAAS_REGION must be set for acceptance tests of DBAAS V2")
+	}
+	if dbaasProjectID == "" {
+		t.Skip("DBAAS_PROJECT_ID must be set for acceptance tests of DBAAS V2")
 	}
 }
