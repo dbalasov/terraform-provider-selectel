@@ -255,6 +255,18 @@ provider openstack {
 	tenant_id = "%s"
 }
 
+// Need to check floating ips
+data "openstack_networking_network_v2" "external_net" {
+  external = true
+  name = "external-network"
+}
+
+resource "openstack_networking_router_v2" "nat_router" {
+  name                = "router_test"
+  admin_state_up      = true
+  external_network_id = data.openstack_networking_network_v2.external_net.id
+}
+
 resource "openstack_networking_secgroup_v2" "ds_sg" {
   name        = "secgroup_test"
 }
@@ -270,6 +282,11 @@ resource "openstack_networking_subnet_v2" "ds_subnet" {
   ip_version = 4
   enable_dhcp = false
   name = "subnet_test"
+}
+
+resource "openstack_networking_router_interface_v2" "router_interface" {
+  router_id = openstack_networking_router_v2.nat_router.id
+  subnet_id = openstack_networking_subnet_v2.ds_subnet.id
 }
 
 data "selectel_dbaas_datastore_type_v2" "dt" {
@@ -316,6 +333,17 @@ provider openstack {
 	tenant_id = "%s"
 }
 
+data "openstack_networking_network_v2" "external_net" {
+  external = true
+  name = "external-network"
+}
+
+resource "openstack_networking_router_v2" "nat_router" {
+  name                = "router_test"
+  admin_state_up      = true
+  external_network_id = data.openstack_networking_network_v2.external_net.id
+}
+
 resource "openstack_networking_secgroup_v2" "ds_sg" {
   name        = "secgroup_test"
 }
@@ -331,6 +359,11 @@ resource "openstack_networking_subnet_v2" "ds_subnet" {
   ip_version = 4
   enable_dhcp = false
   name = "subnet_test"
+}
+
+resource "openstack_networking_router_interface_v2" "router_interface" {
+  router_id = openstack_networking_router_v2.nat_router.id
+  subnet_id = openstack_networking_subnet_v2.ds_subnet.id
 }
 
 data "selectel_dbaas_datastore_type_v2" "dt" {
