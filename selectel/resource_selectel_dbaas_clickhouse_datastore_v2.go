@@ -95,6 +95,8 @@ func resourceDBaaSV2ClickhouseDatastoreCreate(ctx context.Context, d *schema.Res
 
 	d.SetId(datastore.ID)
 
+	d.Set("allow_reduce_nodes", d.Get("allow_reduce_nodes"))
+
 	return resourceDBaaSV2ClickhouseDatastoreRead(ctx, d, meta)
 }
 
@@ -161,6 +163,9 @@ func resourceDBaaSV2ClickhouseDatastoreUpdate(ctx context.Context, d *schema.Res
 		}
 	}
 
+	allowReduceNodes := d.Get("allow_reduce_nodes")
+	d.Set("allow_reduce_nodes", allowReduceNodes)
+
 	if d.HasChange("node_groups") {
 		oldRaw, newRaw := d.GetChange("node_groups")
 
@@ -174,6 +179,7 @@ func resourceDBaaSV2ClickhouseDatastoreUpdate(ctx context.Context, d *schema.Res
 			oldGroups,
 			newGroups,
 			timeout,
+			allowReduceNodes.(bool),
 		); err != nil {
 			return diag.FromErr(err)
 		}
@@ -205,6 +211,7 @@ func reconcileDBaaSV2ClickhouseNodeGroups(
 	oldGroups []any,
 	newGroups []any,
 	timeout time.Duration,
+	allow_reduce_nodes bool,
 ) error {
 
 	oldByName := make(map[string]map[string]any)
@@ -237,8 +244,7 @@ func reconcileDBaaSV2ClickhouseNodeGroups(
 		oldID := oldGroup["id"].(string)
 
 		if err := reconcileDBaaSV2ClickhouseNodeGroup(
-			ctx, client, datastoreID, oldID, oldGroup, newGroup, timeout,
-		); err != nil {
+			ctx, client, datastoreID, oldID, oldGroup, newGroup, timeout, allow_reduce_nodes); err != nil {
 			return fmt.Errorf("reconciliation node group error: %w", err)
 		}
 	}
@@ -270,7 +276,9 @@ func reconcileDBaaSV2ClickhouseNodeGroup(
 	oldGroup map[string]any,
 	newGroup map[string]any,
 	timeout time.Duration,
+	allowReduceNodes bool,
 ) error {
+	groupName := newGroup["name"].(string)
 
 	// check resize
 	oldNodeCount := oldGroup["node_count"].(int)
@@ -279,17 +287,39 @@ func reconcileDBaaSV2ClickhouseNodeGroup(
 	oldFlavor := expandDBaaSV2ClickhouseNodeGroupFlavor(oldGroup["flavor"])
 	newFlavor := expandDBaaSV2ClickhouseNodeGroupFlavor(newGroup["flavor"])
 
-	if oldNodeCount != newNodeCount || !equalDBaaSV2ClickhouseFlavor(oldFlavor, newFlavor) {
+	if newNodeCount < oldNodeCount {
+		if allowReduceNodes {
+			targetIDs, err := getInstanceIDsToReduceClickhouseNodeGroupCount(
+				oldGroup["instances"].([]any), oldNodeCount, newNodeCount,
+			)
+			if err != nil {
+				return fmt.Errorf("node group %s: %w", groupName, err)
+			}
+
+			if err := resizeDBaaSV2ClickhouseNodeGroupDeleteInstances(
+				ctx,
+				client,
+				datastoreID,
+				nodeGroupID,
+				dbaas_v2_ch.NodeGroupDeleteInstancesRequest{
+					Instances: targetIDs,
+				},
+				timeout,
+			); err != nil {
+				return fmt.Errorf("node group %s has resize (reduce count) error: %w", groupName, err)
+			}
+		} else {
+			return fmt.Errorf(
+				"node group %s: use `allow_reduce_nodes = true` to reduce node count", groupName,
+			)
+		}
+	}
+
+	if newNodeCount > oldNodeCount || !equalDBaaSV2ClickhouseFlavor(oldFlavor, newFlavor) {
 		req := dbaas_v2_ch.NodeGroupResizeRequest{
 			NodeCount: newNodeCount,
 			Flavor:    newFlavor,
 		}
-		// TODO: Can not reduce node count by resizeDBaaSV2ClickhouseNodeGroup.
-		// Need another endpoint for deleting instances (what instance ids choose ?)
-		if newNodeCount < oldNodeCount {
-			// use client.ClickHosue.DeleteNodeGroupInstances
-		}
-
 		if err := resizeDBaaSV2ClickhouseNodeGroup(
 			ctx,
 			client,
@@ -298,7 +328,7 @@ func reconcileDBaaSV2ClickhouseNodeGroup(
 			req,
 			timeout,
 		); err != nil {
-			return fmt.Errorf("resizing node group error: %w", err)
+			return fmt.Errorf("node group %s has resize error: %w", groupName, err)
 		}
 	}
 
@@ -314,7 +344,7 @@ func reconcileDBaaSV2ClickhouseNodeGroup(
 			newHasPublicIPs,
 			timeout,
 		); err != nil {
-			return fmt.Errorf("update node group public IPs error: %w", err)
+			return fmt.Errorf("node group %s has update public IPs error: %w", groupName, err)
 		}
 	}
 
@@ -330,13 +360,38 @@ func reconcileDBaaSV2ClickhouseNodeGroup(
 			newWeight,
 			timeout,
 		); err != nil {
-			return fmt.Errorf("update node group weight error: %w", err)
+			return fmt.Errorf("node group %s has update weight error: %w", groupName, err)
 		}
 	}
 
 	return nil
 }
 
+func getInstanceIDsToReduceClickhouseNodeGroupCount(oldInstances []any, oldNodeCount, newNodeCount int) ([]string, error) {
+	instancesLen := len(oldInstances)
+	if instancesLen != oldNodeCount {
+		return nil, fmt.Errorf(
+			"can't reduce node count because of the desynchronization between instances and node_count (%d and %d)", instancesLen, oldNodeCount)
+	}
+	nodeCountToDelete := oldNodeCount - newNodeCount
+	if nodeCountToDelete <= 0 {
+		return nil, fmt.Errorf("bad node count to reduce %d", nodeCountToDelete)
+	}
+
+	startIndex := instancesLen - nodeCountToDelete
+	instancesToDelete := oldInstances[startIndex:]
+
+	targetIDs := make([]string, len(instancesToDelete))
+	for i, rawInstance := range instancesToDelete {
+		if instance, ok := rawInstance.(map[string]any); ok {
+			targetIDs[i] = instance["id"].(string)
+		} else {
+			return nil, errors.New("can't parse instance from state to reduce node count")
+		}
+	}
+	return targetIDs, nil
+
+}
 func resourceDBaaSV2ClickhouseDatastoreDelete(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	dbaasClient, diagErr := getDBaaSV2Client(d, meta)
 	if diagErr != nil {
@@ -378,54 +433,58 @@ func validateDBaaSV2ClickhouseDatastoreDiff(
 	diff *schema.ResourceDiff,
 	meta any,
 ) error {
-	rawGroups, ok := diff.Get("node_groups").([]any)
+	rawNewGroups, ok := diff.Get("node_groups").([]any)
 	if !ok {
 		return nil
 	}
 
-	for _, rawGroup := range rawGroups {
-		group := rawGroup.(map[string]any)
+	seen := make(map[string]map[string]any, len(rawNewGroups))
+	for _, rawNewGroup := range rawNewGroups {
+		newGroup := rawNewGroup.(map[string]any)
 
-		if err := validateDBaaSV2ClickHouseNodeGroup(group); err != nil {
+		if err := validateDBaaSV2ClickHouseNodeGroup(newGroup); err != nil {
 			return err
 		}
+
+		name, _ := newGroup["name"].(string)
+
+		if _, dup := seen[name]; dup {
+			return fmt.Errorf("node_groups: duplicate group name %s", name)
+		}
+		seen[name] = newGroup
 	}
 
 	return nil
 }
 
 func validateDBaaSV2ClickHouseNodeGroup(group map[string]any) error {
+	name := group["name"].(string)
 	role := group["role"].(string)
 	hasPublicIPs := group["has_public_ips"].(bool)
 	weight := group["weight"].(int)
 	nodeCount := group["node_count"].(int)
 
+	if name == "" {
+		return errors.New("node group with empty name.")
+	}
+
 	if nodeCount < 1 {
-		return fmt.Errorf("node group %q with node count < 1", group["name"])
+		return fmt.Errorf("node group %s with node count < 1", name)
 	}
 
 	switch role {
 	case string(dbaas_v2_ch.NodeGroupRoleData):
 		if weight <= 0 {
-			return fmt.Errorf(
-				"node group %q with role DATA must have weight > 0",
-				group["name"],
-			)
+			return fmt.Errorf("node group %s with role DATA must have weight > 0", name)
 		}
 
 	case string(dbaas_v2_ch.NodeGroupRoleKeeper):
 		if hasPublicIPs {
-			return fmt.Errorf(
-				"node group %q with role KEEPER cannot have public IPs",
-				group["name"],
-			)
+			return fmt.Errorf("node group %s with role KEEPER cannot have public IPs", name)
 		}
 
 		if weight > 0 {
-			return fmt.Errorf(
-				"node group %q with role KEEPER cannot have weight > 0",
-				group["name"],
-			)
+			return fmt.Errorf("node group %s with role KEEPER cannot have weight > 0", name)
 		}
 	}
 

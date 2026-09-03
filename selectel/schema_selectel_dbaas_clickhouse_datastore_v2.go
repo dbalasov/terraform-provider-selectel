@@ -61,6 +61,13 @@ func resourceDBaaSV2ClickhouseDatastoreSchema() map[string]*schema.Schema {
 		},
 	}
 
+	datastoreSchema["allow_reduce_nodes"] = &schema.Schema{
+		Type:        schema.TypeBool,
+		Optional:    true,
+		Default:     false,
+		Description: "Allows forced reduction of node count.",
+	}
+
 	return datastoreSchema
 }
 
