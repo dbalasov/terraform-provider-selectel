@@ -38,7 +38,7 @@ func getDBaaSV2Client(d *schema.ResourceData, meta any) (*dbaas_v2.API, diag.Dia
 		return nil, diag.FromErr(fmt.Errorf("can't get endpoint to init dbaas v2 client: %w", err))
 	}
 
-	client, err := dbaas.NewDBAASClientV2(selvpcClient.GetXAuthToken(), endpoint.URL)
+	client, err := dbaas.NewDBAASClientV2WithRetry(selvpcClient.GetXAuthToken(), endpoint.URL, dbaas_v2.RetryConfig{MaxRetries: 3})
 	if err != nil {
 		return nil, diag.FromErr(fmt.Errorf("can't create dbaas v2 client: %w", err))
 	}
