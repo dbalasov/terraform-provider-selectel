@@ -379,6 +379,32 @@ func resizeDBaaSV2ClickhouseNodeGroup(
 	return nil
 }
 
+func resizeDBaaSV2ClickhouseNodeGroupDeleteInstances(
+	ctx context.Context,
+	client *dbaas_v2.API,
+	datastoreID string,
+	nodeGroupID string,
+	resizeData dbaas_v2_ch.NodeGroupDeleteInstancesRequest,
+	timeout time.Duration,
+) error {
+	extraMsg := fmt.Sprintf("resize node group %s: %+v", nodeGroupID, resizeData)
+
+	log.Print(msgUpdate(objectDatastore, datastoreID, extraMsg))
+
+	_, err := client.ClickHouse.DeleteNodeGroupInstances(ctx, datastoreID, nodeGroupID, resizeData)
+	if err != nil {
+		return errUpdatingObject(objectDatastore, datastoreID, err)
+	}
+
+	log.Printf("[DEBUG] waiting for datastore %s to become 'ACTIVE'", datastoreID)
+	err = waiters.WaitForDBaaSV2DatastoreRunningActive(ctx, client.ClickHouse, datastoreID, timeout)
+	if err != nil {
+		return errUpdatingObject(objectDatastore, datastoreID, err)
+	}
+
+	return nil
+}
+
 func updateDBaaSV2ClickhouseNodeGroupPublicIPs(
 	ctx context.Context,
 	client *dbaas_v2.API,
