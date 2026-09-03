@@ -97,7 +97,7 @@ func TestAccDBaaSClickhouseDatastoreV2Basic(t *testing.T) {
 	updatedDatastorePassword := "Iu2YgYlk!ORzUpd"
 	updatedShardOneWeight := 70
 	updatedshardOneNodeCountTwo := 2
-	updatedshardOneNodeCountOne := 2
+	updatedshardOneNodeCountOne := 1
 	updatedShardOneFlavor := dbaas_v2_ch.FlavorForNodeGroupRequest{
 		Type:     dbaas_v2_common.FlavorTypeFlexible,
 		VCPUs:    4,
@@ -376,5 +376,5 @@ resource "selectel_dbaas_clickhouse_datastore_v2" "datastore_tf_acc_test_1" {
       disk_type = "%s"
     }
   }
-}`, dbaasProjectID, dbaasRegion, dbaasProjectID, dbaasRegion, dbaasProjectID, dbaasRegion, datastoreName, dbaasProjectID, dbaasRegion, datastorePassword, securityGroupsBlock, keepersBlock, shardOneNodeCount, shardOneWeight, HasPublickIPsBlock, shardOneFlavor.Type, shardOneFlavor.VCPUs, shardOneFlavor.RAM, shardOneFlavor.Disk, shardOneFlavor.DiskType, allowReduceNodes)
+}`, dbaasProjectID, dbaasRegion, dbaasProjectID, dbaasRegion, dbaasProjectID, dbaasRegion, datastoreName, dbaasProjectID, dbaasRegion, datastorePassword, securityGroupsBlock, strconv.FormatBool(allowReduceNodes), keepersBlock, shardOneNodeCount, shardOneWeight, HasPublickIPsBlock, shardOneFlavor.Type, shardOneFlavor.VCPUs, shardOneFlavor.RAM, shardOneFlavor.Disk, shardOneFlavor.DiskType)
 }
