@@ -20,6 +20,7 @@ func resourceDBaaSV2ClickhouseDatastoreSchema() map[string]*schema.Schema {
 	datastoreSchema["node_groups"] = &schema.Schema{
 		Type:     schema.TypeList,
 		Required: true,
+		MinItems: 1,
 
 		Elem: &schema.Resource{
 			Schema: dbaasV2ClickhouseNodeGroupSchema(),
