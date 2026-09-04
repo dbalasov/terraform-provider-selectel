@@ -30,7 +30,7 @@ func resourceDBaaSV2ClickhouseDatastore() *schema.Resource {
 		},
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(60 * time.Minute),
-			Update: schema.DefaultTimeout(60 * time.Minute),
+			Update: schema.DefaultTimeout(60 * time.Minute), // resize could take more time if node group with large disk
 			Delete: schema.DefaultTimeout(60 * time.Minute),
 		},
 		Schema: resourceDBaaSV2ClickhouseDatastoreSchema(),
