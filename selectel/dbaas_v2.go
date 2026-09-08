@@ -204,6 +204,19 @@ func expandDBaaSV2ClickhouseDatastoreLogPlatform(raw any) (dbaas_v2_ch.Datastore
 	return res, nil
 }
 
+func expandDBaaSV2ClickhouseShardNameFromSet(shardNamesSet *schema.Set) []string {
+	if shardNamesSet == nil {
+		return nil
+	}
+
+	result := make([]string, 0, shardNamesSet.Len())
+	for _, value := range shardNamesSet.List() {
+		result = append(result, value.(string))
+	}
+
+	return result
+}
+
 func updateDBaaSV2ClickhouseDatastoreName(ctx context.Context, d *schema.ResourceData, client *dbaas_v2.API) error {
 	var updateOpts dbaas_v2_ch.DatastoreUpdateRequest
 	updateOpts.Name = d.Get("name").(string)
