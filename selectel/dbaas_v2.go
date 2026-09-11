@@ -52,7 +52,7 @@ func validateDBaaSV2DatastoreType(ctx context.Context, expectedDatastoreTypeEngi
 
 	response, err := client.DatastoreType.GetDatastoreTypeList(ctx)
 	if err != nil {
-		return diag.FromErr(errors.New("Couldnt get datastore type list"))
+		return diag.FromErr(fmt.Errorf("getting datastore type list: %w", err))
 	}
 
 	if response.Errors != "" {
@@ -65,6 +65,7 @@ func validateDBaaSV2DatastoreType(ctx context.Context, expectedDatastoreTypeEngi
 	for _, dt := range response.DatastoreTypes {
 		if dt.ID == typeID {
 			datastoreType = &dt
+			break
 		}
 	}
 
@@ -204,6 +205,15 @@ func expandDBaaSV2ClickhouseDatastoreLogPlatform(raw any) (dbaas_v2_ch.Datastore
 	return res, nil
 }
 
+func expandDBaaSV2DatastoreSecurityGroupsFromSet(securityGroupsSet *schema.Set) []string {
+	result := make([]string, 0, securityGroupsSet.Len())
+	for _, value := range securityGroupsSet.List() {
+		result = append(result, value.(string))
+	}
+
+	return result
+}
+
 func updateDBaaSV2ClickhouseDatastoreName(ctx context.Context, d *schema.ResourceData, client *dbaas_v2.API) error {
 	var updateOpts dbaas_v2_ch.DatastoreUpdateRequest
 	updateOpts.Name = d.Get("name").(string)
@@ -226,9 +236,9 @@ func updateDBaaSV2ClickhouseDatastoreName(ctx context.Context, d *schema.Resourc
 
 func updateDBaaSV2ClickhouseDatastorePassword(ctx context.Context, d *schema.ResourceData, client *dbaas_v2.API) error {
 	var updateOpts dbaas_v2_ch.DatastoreUpdatePasswordRequest
-	updateOpts.NewPassword = d.Get("password").(string)
-
 	log.Print(msgUpdate(objectDatastore, d.Id(), updateOpts))
+	// do after log to avoid exposing the password
+	updateOpts.NewPassword = d.Get("password").(string)
 	_, err := client.ClickHouse.UpdateDatastorePassword(ctx, d.Id(), updateOpts)
 	if err != nil {
 		return errUpdatingObject(objectDatastore, d.Id(), err)
@@ -251,12 +261,12 @@ func updateDBaaSV2ClickhouseDatastoreLogPlatform(ctx context.Context, d *schema.
 	log.Print(msgUpdate(objectDatastore, d.Id(), updateOpts))
 	rawLogPlatform, ok := d.GetOk("log_platform")
 	if ok {
-		logGroup, err := expandDBaaSV2ClickhouseDatastoreLogPlatform(rawLogPlatform)
-		if err == nil {
-			updateOpts.LogPlatform = logGroup
-			_, err = client.ClickHouse.EnableLogPlatform(ctx, d.Id(), updateOpts)
+		logGroup, expandErr := expandDBaaSV2ClickhouseDatastoreLogPlatform(rawLogPlatform)
+		if expandErr != nil {
+			return errUpdatingObject(objectDatastore, d.Id(), expandErr)
 		}
-
+		updateOpts.LogPlatform = logGroup
+		_, err = client.ClickHouse.EnableLogPlatform(ctx, d.Id(), updateOpts)
 	} else {
 		err = client.ClickHouse.DisableLogPlatform(ctx, d.Id())
 	}

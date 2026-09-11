@@ -14,7 +14,7 @@ import (
 	dbaas_v2_common "github.com/selectel/dbaas-go/v2/common"
 )
 
-const resourceDBaaSClisckhouseDatastoreV2Name = "selectel_dbaas_clickhouse_datastore_v2.datastore_tf_acc_test_1"
+const resourceDBaaSClickhouseDatastoreV2Name = "selectel_dbaas_clickhouse_datastore_v2.datastore_tf_acc_test_1"
 
 func testAccCheckDBaaSV2ClickhouseDatastoreDestroy(s *terraform.State) error {
 
@@ -134,145 +134,145 @@ func TestAccDBaaSClickhouseDatastoreV2Basic(t *testing.T) {
 			{
 				Config: testAccDBaaSClickhouseDatastoreV2Basic(datastoreName, datastorePassword, datastoreSG, keepersBlock, shardOneWeight, shardOneNodeCount, shardOneFlavor, shardOneHasPublicIps, allowReduceNodes),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckDBaaSV2ClickhouseDatastoreExists(resourceDBaaSClisckhouseDatastoreV2Name, &dbaasDatastore),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "name", datastoreName),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "region", dbaasRegion),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "status", string(dbaas_v2_common.DatastoreStatusActive)),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "state", string(dbaas_v2_common.DatastoreStateRunning)),
+					testAccCheckDBaaSV2ClickhouseDatastoreExists(resourceDBaaSClickhouseDatastoreV2Name, &dbaasDatastore),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "name", datastoreName),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "region", dbaasRegion),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "status", string(dbaas_v2_common.DatastoreStatusActive)),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "state", string(dbaas_v2_common.DatastoreStateRunning)),
 
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.#", "1"),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.0.name", "shard1"),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.0.node_count", strconv.Itoa(shardOneNodeCount)),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.0.role", "DATA"),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.0.weight", strconv.Itoa(shardOneWeight)),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.#", "1"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.name", "shard1"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.node_count", strconv.Itoa(shardOneNodeCount)),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.role", "DATA"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.weight", strconv.Itoa(shardOneWeight)),
 
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.0.flavor.0.type", string(shardOneFlavor.Type)),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.0.flavor.0.vcpus", strconv.Itoa(shardOneFlavor.VCPUs)),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.0.flavor.0.ram", strconv.Itoa(shardOneFlavor.RAM)),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.0.flavor.0.disk", strconv.Itoa(shardOneFlavor.Disk)),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.0.flavor.0.disk_type", string(shardOneFlavor.DiskType)),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.flavor.0.type", string(shardOneFlavor.Type)),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.flavor.0.vcpus", strconv.Itoa(shardOneFlavor.VCPUs)),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.flavor.0.ram", strconv.Itoa(shardOneFlavor.RAM)),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.flavor.0.disk", strconv.Itoa(shardOneFlavor.Disk)),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.flavor.0.disk_type", string(shardOneFlavor.DiskType)),
 
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "security_groups.#", "1"),
-					resource.TestCheckResourceAttrSet(resourceDBaaSClisckhouseDatastoreV2Name, "security_groups.0"), // first item is not empty string
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "security_groups.#", "1"),
+					resource.TestCheckResourceAttrSet(resourceDBaaSClickhouseDatastoreV2Name, "security_groups.0"), // first item is not empty string
 
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "allow_reduce_nodes", strconv.FormatBool(allowReduceNodes)),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "allow_reduce_nodes", strconv.FormatBool(allowReduceNodes)),
 				),
 			},
 			// Update datastore name
 			{
 				Config: testAccDBaaSClickhouseDatastoreV2Basic(updatedDatastoreName, datastorePassword, datastoreSG, keepersBlock, shardOneWeight, shardOneNodeCount, shardOneFlavor, shardOneHasPublicIps, allowReduceNodes),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "name", updatedDatastoreName),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "name", updatedDatastoreName),
 				),
 			},
 			// Update datastore password
 			{
 				Config: testAccDBaaSClickhouseDatastoreV2Basic(updatedDatastoreName, updatedDatastorePassword, datastoreSG, keepersBlock, shardOneWeight, shardOneNodeCount, shardOneFlavor, shardOneHasPublicIps, allowReduceNodes),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "name", updatedDatastoreName),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "name", updatedDatastoreName),
 				),
 			},
 			// Update datastore security groups
 			{
 				Config: testAccDBaaSClickhouseDatastoreV2Basic(updatedDatastoreName, updatedDatastorePassword, updatedDatastoreSG, keepersBlock, shardOneWeight, shardOneNodeCount, shardOneFlavor, shardOneHasPublicIps, allowReduceNodes),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "name", updatedDatastoreName),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "security_groups.#", "1"),
-					resource.TestCheckResourceAttrSet(resourceDBaaSClisckhouseDatastoreV2Name, "security_groups.0"), // first item is not empty string
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "name", updatedDatastoreName),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "security_groups.#", "1"),
+					resource.TestCheckResourceAttrSet(resourceDBaaSClickhouseDatastoreV2Name, "security_groups.0"), // first item is not empty string
 				),
 			},
 			// Update shard1 weight
 			{
 				Config: testAccDBaaSClickhouseDatastoreV2Basic(updatedDatastoreName, updatedDatastorePassword, updatedDatastoreSG, keepersBlock, updatedShardOneWeight, shardOneNodeCount, shardOneFlavor, shardOneHasPublicIps, allowReduceNodes),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "name", updatedDatastoreName),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.0.weight", strconv.Itoa(updatedShardOneWeight)),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.0.has_public_ips", "false"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "name", updatedDatastoreName),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.weight", strconv.Itoa(updatedShardOneWeight)),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.has_public_ips", "false"),
 				),
 			},
 			// Update shard1 add public ips
 			{
 				Config: testAccDBaaSClickhouseDatastoreV2Basic(updatedDatastoreName, updatedDatastorePassword, updatedDatastoreSG, keepersBlock, updatedShardOneWeight, shardOneNodeCount, shardOneFlavor, updatedShardOneHasPublicIps, allowReduceNodes),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "name", updatedDatastoreName),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.0.weight", strconv.Itoa(updatedShardOneWeight)),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.0.has_public_ips", "true"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "name", updatedDatastoreName),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.weight", strconv.Itoa(updatedShardOneWeight)),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.has_public_ips", "true"),
 				),
 			},
 			// Resize shard1 by flavor
 			{
 				Config: testAccDBaaSClickhouseDatastoreV2Basic(updatedDatastoreName, updatedDatastorePassword, updatedDatastoreSG, keepersBlock, updatedShardOneWeight, shardOneNodeCount, updatedShardOneFlavor, updatedShardOneHasPublicIps, allowReduceNodes),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "name", updatedDatastoreName),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.0.weight", strconv.Itoa(updatedShardOneWeight)),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.0.node_count", strconv.Itoa(shardOneNodeCount)),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.0.has_public_ips", "true"),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.0.flavor.0.type", string(updatedShardOneFlavor.Type)),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.0.flavor.0.vcpus", strconv.Itoa(updatedShardOneFlavor.VCPUs)),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.0.flavor.0.ram", strconv.Itoa(updatedShardOneFlavor.RAM)),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.0.flavor.0.disk", strconv.Itoa(updatedShardOneFlavor.Disk)),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.0.flavor.0.disk_type", string(updatedShardOneFlavor.DiskType)),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "name", updatedDatastoreName),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.weight", strconv.Itoa(updatedShardOneWeight)),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.node_count", strconv.Itoa(shardOneNodeCount)),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.has_public_ips", "true"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.flavor.0.type", string(updatedShardOneFlavor.Type)),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.flavor.0.vcpus", strconv.Itoa(updatedShardOneFlavor.VCPUs)),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.flavor.0.ram", strconv.Itoa(updatedShardOneFlavor.RAM)),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.flavor.0.disk", strconv.Itoa(updatedShardOneFlavor.Disk)),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.flavor.0.disk_type", string(updatedShardOneFlavor.DiskType)),
 				),
 			},
 			// Add keepers node group
 			{
 				Config: testAccDBaaSClickhouseDatastoreV2Basic(updatedDatastoreName, updatedDatastorePassword, updatedDatastoreSG, updatedKeepersBlock, updatedShardOneWeight, shardOneNodeCount, updatedShardOneFlavor, updatedShardOneHasPublicIps, allowReduceNodes),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "name", updatedDatastoreName),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "name", updatedDatastoreName),
 
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.#", "2"),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.0.name", "keepers"),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.0.node_count", "3"),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.0.role", "KEEPER"),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.0.flavor.0.type", "FIXED"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.#", "2"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.name", "keepers"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.node_count", "3"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.role", "KEEPER"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.flavor.0.type", "FIXED"),
 
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.1.name", "shard1"),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.1.node_count", strconv.Itoa(shardOneNodeCount)),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.1.role", "DATA"),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.1.weight", strconv.Itoa(updatedShardOneWeight)),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.1.flavor.0.type", string(updatedShardOneFlavor.Type)),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.1.name", "shard1"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.1.node_count", strconv.Itoa(shardOneNodeCount)),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.1.role", "DATA"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.1.weight", strconv.Itoa(updatedShardOneWeight)),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.1.flavor.0.type", string(updatedShardOneFlavor.Type)),
 				),
 			},
 			// Update node count for shard1 (add node)
 			{
 				Config: testAccDBaaSClickhouseDatastoreV2Basic(updatedDatastoreName, updatedDatastorePassword, updatedDatastoreSG, updatedKeepersBlock, updatedShardOneWeight, updatedshardOneNodeCountTwo, updatedShardOneFlavor, updatedShardOneHasPublicIps, allowReduceNodes),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "name", updatedDatastoreName),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "name", updatedDatastoreName),
 
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.#", "2"),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.0.name", "keepers"),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.0.node_count", "3"),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.0.role", "KEEPER"),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.0.flavor.0.type", "FIXED"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.#", "2"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.name", "keepers"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.node_count", "3"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.role", "KEEPER"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.flavor.0.type", "FIXED"),
 
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.1.name", "shard1"),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.1.node_count", strconv.Itoa(updatedshardOneNodeCountTwo)),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.1.role", "DATA"),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.1.weight", strconv.Itoa(updatedShardOneWeight)),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.1.has_public_ips", "true"),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.1.flavor.0.type", string(updatedShardOneFlavor.Type)),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.1.name", "shard1"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.1.node_count", strconv.Itoa(updatedshardOneNodeCountTwo)),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.1.role", "DATA"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.1.weight", strconv.Itoa(updatedShardOneWeight)),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.1.has_public_ips", "true"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.1.flavor.0.type", string(updatedShardOneFlavor.Type)),
 				),
 			},
 			// Update node count for shard1 (delete)
 			{
 				Config: testAccDBaaSClickhouseDatastoreV2Basic(updatedDatastoreName, updatedDatastorePassword, updatedDatastoreSG, updatedKeepersBlock, updatedShardOneWeight, updatedshardOneNodeCountOne, updatedShardOneFlavor, updatedShardOneHasPublicIps, updAllowReduceNodes),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "name", updatedDatastoreName),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "name", updatedDatastoreName),
 
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.#", "2"),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.0.name", "keepers"),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.0.node_count", "3"),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.0.role", "KEEPER"),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.0.flavor.0.type", "FIXED"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.#", "2"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.name", "keepers"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.node_count", "3"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.role", "KEEPER"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.flavor.0.type", "FIXED"),
 
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.1.name", "shard1"),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.1.node_count", strconv.Itoa(updatedshardOneNodeCountOne)),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.1.role", "DATA"),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.1.weight", strconv.Itoa(updatedShardOneWeight)),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.1.has_public_ips", "true"),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.1.flavor.0.type", string(updatedShardOneFlavor.Type)),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.1.name", "shard1"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.1.node_count", strconv.Itoa(updatedshardOneNodeCountOne)),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.1.role", "DATA"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.1.weight", strconv.Itoa(updatedShardOneWeight)),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.1.has_public_ips", "true"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.1.flavor.0.type", string(updatedShardOneFlavor.Type)),
 
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "allow_reduce_nodes", strconv.FormatBool(updAllowReduceNodes)),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "allow_reduce_nodes", strconv.FormatBool(updAllowReduceNodes)),
 				),
 			},
 		},

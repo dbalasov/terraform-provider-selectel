@@ -55,32 +55,29 @@ func resourceDBaaSV2ClickhouseDatastoreCreate(ctx context.Context, d *schema.Res
 		Name:       d.Get("name").(string),
 		TypeID:     typeID,
 		SubnetID:   d.Get("subnet_id").(string),
-		Password:   d.Get("password").(string),
 		Config:     d.Get("config").(map[string]any),
 		NodeGroups: nodeGroups,
 	}
 
-	// May be update to V2 (expand and error)
 	sgRaw, sgOk := d.GetOk("security_groups")
 	if sgOk {
 		sgSet := sgRaw.(*schema.Set)
-		sg, err := resourceDBaaSDatastoreV1SecurityGroupsFromSet(sgSet)
-		if err != nil {
-			return diag.FromErr(errParseDatastoreV1SecurityGroups(err))
-		}
-		datastoreCreateOpts.SecurityGroups = sg
+		datastoreCreateOpts.SecurityGroups = expandDBaaSV2DatastoreSecurityGroupsFromSet(sgSet)
 	}
 
 	logPlatform, logOk := d.GetOk("log_platform")
 	if logOk {
-		log, err := expandDBaaSV2ClickhouseDatastoreLogPlatform(logPlatform)
+		logPlatform, err := expandDBaaSV2ClickhouseDatastoreLogPlatform(logPlatform)
 		if err != nil {
 			return diag.FromErr(errParseDatastoreV2LogPlatform(err))
 		}
-		datastoreCreateOpts.LogPlatform = &log
+		datastoreCreateOpts.LogPlatform = &logPlatform
 	}
 
 	log.Print(msgCreate(objectDatastore, datastoreCreateOpts))
+	// do after log to avoid exposing the password
+	datastoreCreateOpts.Password = d.Get("password").(string)
+
 	datastore, err := dbaasClient.ClickHouse.CreateDatastore(ctx, datastoreCreateOpts)
 	if err != nil {
 		return diag.FromErr(errCreatingObject(objectDatastore, err))
