@@ -73,7 +73,7 @@ resource "selectel_vpc_project_v2" "project_tf_acc_test_1" {
 
 data "selectel_dbaas_datastore_type_v2" "datastore_type_tf_acc_test_1" {
   project_id = "${selectel_vpc_project_v2.project_tf_acc_test_1.id}"
-  region     = "ru-2"
+  region     = "ru-1"
   filter {
     engine = "%s"
     version = "%s"

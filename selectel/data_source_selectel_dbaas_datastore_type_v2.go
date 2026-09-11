@@ -9,6 +9,11 @@ import (
 	dbaas_v2 "github.com/selectel/dbaas-go/v2/common"
 )
 
+type dbaasV2DatastoreTypeSearchFilter struct {
+	engine  string
+	version string
+}
+
 func dataSourceDBaaSV2DatastoreType() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceDBaaSV2DatastoreTypeRead,
@@ -84,7 +89,7 @@ func dataSourceDBaaSV2DatastoreTypeRead(ctx context.Context, d *schema.ResourceD
 		datastoreTypeIDs = append(datastoreTypeIDs, datastoreType.ID)
 	}
 
-	filter, err := expandDatastoreTypeSearchFilter(d.Get("filter").(*schema.Set))
+	filter, err := expandDBaaSV2DatastoreTypeSearchFilter(d.Get("filter").(*schema.Set))
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -147,4 +152,25 @@ func flattenDBaaSV2DatastoreTypes(datastoreTypes []dbaas_v2.DatastoreTypeRespons
 	}
 
 	return datastoreTypesList
+}
+
+func expandDBaaSV2DatastoreTypeSearchFilter(filterSet *schema.Set) (dbaasV2DatastoreTypeSearchFilter, error) {
+	filter := dbaasV2DatastoreTypeSearchFilter{}
+	if filterSet.Len() == 0 {
+		return filter, nil
+	}
+
+	resourceFilterMap := filterSet.List()[0].(map[string]any)
+
+	engine, ok := resourceFilterMap["engine"]
+	if ok {
+		filter.engine = engine.(string)
+	}
+
+	version, ok := resourceFilterMap["version"]
+	if ok {
+		filter.version = version.(string)
+	}
+
+	return filter, nil
 }

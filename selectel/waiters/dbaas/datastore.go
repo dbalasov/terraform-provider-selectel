@@ -141,7 +141,7 @@ func WaitForDBaaSV2DatastoreDeleted[D DBaaSV2DatastoreResponse](
 	_, err := stateConf.WaitForStateContext(ctx)
 	if err != nil {
 		return fmt.Errorf(
-			"error waiting for the datastore %s to become deleted': %s",
+			"error waiting for the datastore %s to become deleted: %s",
 			datastoreID, err)
 	}
 
