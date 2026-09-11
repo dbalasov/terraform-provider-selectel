@@ -45,6 +45,7 @@ func resourceDBaaSV2ClickhouseDatastoreSchema() map[string]*schema.Schema {
 			Type:         schema.TypeString,
 			ValidateFunc: validation.IsUUID,
 		},
+		MinItems: 1,
 	}
 
 	datastoreSchema["log_platform"] = &schema.Schema{
