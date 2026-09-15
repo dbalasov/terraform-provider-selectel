@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strconv"
 	"testing"
 
@@ -15,6 +16,11 @@ import (
 )
 
 const resourceDBaaSClickhouseDatastoreV2Name = "selectel_dbaas_clickhouse_datastore_v2.datastore_tf_acc_test_1"
+
+var (
+	dbaasRegion    = os.Getenv("INFRA_REGION")
+	dbaasProjectID = os.Getenv("INFRA_PROJECT_ID")
+)
 
 func testAccCheckDBaaSV2ClickhouseDatastoreDestroy(s *terraform.State) error {
 
@@ -109,7 +115,7 @@ func TestAccDBaaSClickhouseDatastoreV2Basic(t *testing.T) {
 	updatedShardOneHasPublicIps := true
 	updatedKeepersBlock := `
 	node_groups {
-	  name       = "keepers" 
+	  name       = "keepers"
 	  role       = "KEEPER"
 	  node_count = 3
 
@@ -117,7 +123,7 @@ func TestAccDBaaSClickhouseDatastoreV2Basic(t *testing.T) {
 	    id    = "${data.selectel_dbaas_flavor_v2.keeper_flavor.flavors[0].id}"
 	    type  = "FIXED"
 	  }
-  	}
+	}
 	`
 	updAllowReduceNodes := true
 
@@ -291,8 +297,13 @@ func testAccDBaaSClickhouseDatastoreV2Basic(datastoreName, datastorePassword, da
 		HasPublickIPsBlock = "has_public_ips = true"
 	}
 	return fmt.Sprintf(`
+locals {
+  project_id = "%s"
+  region_name     = "%s"
+}
+
 provider openstack {
-	tenant_id = "%s"
+	tenant_id = local.project_id
 }
 
 // Need to check floating ips
@@ -312,7 +323,7 @@ resource "openstack_networking_secgroup_v2" "ds_sg" {
 }
 
 resource "openstack_networking_network_v2" "ds_net" {
- 	region = "%s"
+ 	region = local.region_name
   	name = "network_test"
 }
 
@@ -330,8 +341,8 @@ resource "openstack_networking_router_interface_v2" "router_interface" {
 }
 
 data "selectel_dbaas_datastore_type_v2" "dt" {
-  project_id = "%s"
-  region = "%s"
+  project_id = local.project_id
+  region = local.region_name
   filter {
     engine = "clickhouse"
     version = "26.3.12.3"
@@ -340,8 +351,8 @@ data "selectel_dbaas_datastore_type_v2" "dt" {
 }
 
 data "selectel_dbaas_flavor_v2" "keeper_flavor" {
-  project_id = "%s"
-  region     = "%s"
+  project_id = local.project_id
+  region = local.region_name
   filter {
     datastore_type_id = "${data.selectel_dbaas_datastore_type_v2.dt.datastore_types[0].id}"
 	allowed_role = "KEEPER"
@@ -350,8 +361,8 @@ data "selectel_dbaas_flavor_v2" "keeper_flavor" {
 
 resource "selectel_dbaas_clickhouse_datastore_v2" "datastore_tf_acc_test_1" {
   name = "%s"
-  project_id = "%s"
-  region = "%s"
+  project_id = local.project_id
+  region = local.region_name
   type_id = "${data.selectel_dbaas_datastore_type_v2.dt.datastore_types[0].id}"
   subnet_id = "${openstack_networking_subnet_v2.ds_subnet.id}"
   password = "%s"
@@ -376,5 +387,5 @@ resource "selectel_dbaas_clickhouse_datastore_v2" "datastore_tf_acc_test_1" {
       disk_type = "%s"
     }
   }
-}`, dbaasProjectID, dbaasRegion, dbaasProjectID, dbaasRegion, dbaasProjectID, dbaasRegion, datastoreName, dbaasProjectID, dbaasRegion, datastorePassword, securityGroupsBlock, strconv.FormatBool(allowReduceNodes), keepersBlock, shardOneNodeCount, shardOneWeight, HasPublickIPsBlock, shardOneFlavor.Type, shardOneFlavor.VCPUs, shardOneFlavor.RAM, shardOneFlavor.Disk, shardOneFlavor.DiskType)
+}`, dbaasProjectID, dbaasRegion, datastoreName, datastorePassword, securityGroupsBlock, strconv.FormatBool(allowReduceNodes), keepersBlock, shardOneNodeCount, shardOneWeight, HasPublickIPsBlock, shardOneFlavor.Type, shardOneFlavor.VCPUs, shardOneFlavor.RAM, shardOneFlavor.Disk, shardOneFlavor.DiskType)
 }

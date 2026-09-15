@@ -211,19 +211,8 @@ func reconcileDBaaSV2ClickhouseNodeGroups(
 	allow_reduce_nodes bool,
 ) error {
 
-	oldByName := make(map[string]map[string]any)
-
-	for _, raw := range oldGroups {
-		group := raw.(map[string]any)
-		oldByName[group["name"].(string)] = group
-	}
-
-	newByName := make(map[string]map[string]any)
-
-	for _, raw := range newGroups {
-		group := raw.(map[string]any)
-		newByName[group["name"].(string)] = group
-	}
+	oldByName := clickhouseNodeGroupsByName(oldGroups)
+	newByName := clickhouseNodeGroupsByName(newGroups)
 
 	// Create / update.
 	for name, newGroup := range newByName {
@@ -446,11 +435,14 @@ func validateDBaaSV2ClickhouseDatastoreDiff(
 		name, _ := newGroup["name"].(string)
 
 		if _, dup := seen[name]; dup {
-			return fmt.Errorf("node_groups: duplicate group name %s", name)
+			return fmt.Errorf("node_groups: duplicate group name %q", name)
 		}
 		seen[name] = newGroup
 	}
 
+	if err := validateDBaaSV2ClickhouseNodeGroupsDiff(diff); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -466,27 +458,87 @@ func validateDBaaSV2ClickHouseNodeGroup(group map[string]any) error {
 	}
 
 	if nodeCount < 1 {
-		return fmt.Errorf("node group %s with node count < 1", name)
+		return fmt.Errorf("node group %q with node count < 1", name)
 	}
 
 	switch role {
 	case string(dbaas_v2_ch.NodeGroupRoleData):
 		if weight <= 0 {
-			return fmt.Errorf("node group %s with role DATA must have weight > 0", name)
+			return fmt.Errorf("node group %q with role DATA must have weight > 0", name)
 		}
 
 	case string(dbaas_v2_ch.NodeGroupRoleKeeper):
 		if hasPublicIPs {
-			return fmt.Errorf("node group %s with role KEEPER cannot have public IPs", name)
+			return fmt.Errorf("node group %q with role KEEPER cannot have public IPs", name)
 		}
 
 		if weight > 0 {
-			return fmt.Errorf("node group %s with role KEEPER cannot have weight > 0", name)
+			return fmt.Errorf("node group %q with role KEEPER cannot have weight > 0", name)
 		}
 	}
 
 	if err := validateDBaaSV2ClickHouseNodeGroupFlavor(group); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func clickhouseNodeGroupsByName(groups []any) map[string]map[string]any {
+	result := make(map[string]map[string]any, len(groups))
+
+	for _, raw := range groups {
+		group := raw.(map[string]any)
+		name := group["name"].(string)
+		result[name] = group
+	}
+
+	return result
+}
+
+func validateDBaaSV2ClickhouseNodeGroupsDiff(diff *schema.ResourceDiff) error {
+	rawOld, rawNew := diff.GetChange("node_groups")
+
+	oldGroups, ok := rawOld.([]any)
+	if !ok {
+		return nil
+	}
+
+	newGroups, ok := rawNew.([]any)
+	if !ok {
+		return nil
+	}
+
+	oldByName := clickhouseNodeGroupsByName(oldGroups)
+	newByName := clickhouseNodeGroupsByName(newGroups)
+
+	// can't change role for existing group
+	for name, oldGroup := range oldByName {
+		newGroup, exists := newByName[name]
+		if !exists {
+			continue
+		}
+
+		oldRole, _ := oldGroup["role"].(string)
+		newRole, _ := newGroup["role"].(string)
+
+		if oldRole != newRole {
+			return fmt.Errorf(
+				"node_groups: changing role of node group %q is not allowed",
+				name,
+			)
+		}
+	}
+
+	if len(oldGroups) == len(newByName) {
+		for name := range oldByName {
+			if _, exists := newByName[name]; !exists {
+				return fmt.Errorf(
+					"node_groups: changing name of node group %q is not allowed",
+					name,
+				)
+			}
+		}
 	}
 
 	return nil
