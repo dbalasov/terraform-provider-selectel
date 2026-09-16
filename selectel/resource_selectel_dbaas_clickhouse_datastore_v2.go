@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -105,9 +106,16 @@ func resourceDBaaSV2ClickhouseDatastoreRead(ctx context.Context, d *schema.Resou
 
 	log.Print(msgGet(objectDatastore, d.Id()))
 	datastore, err := dbaasClient.ClickHouse.GetDatastore(ctx, d.Id())
+
+	var dbaasError *dbaas_v2.DBaaSAPIError
 	if err != nil {
+		if errors.As(err, &dbaasError) && dbaasError.StatusCode() == http.StatusNotFound {
+			d.SetId("")
+			return nil
+		}
 		return diag.FromErr(errGettingObject(objectDatastore, d.Id(), err))
 	}
+
 	d.Set("name", datastore.Name)
 	d.Set("status", datastore.Status)
 	d.Set("state", datastore.State)
