@@ -27,9 +27,6 @@ func TestAccDBaaSClickhouseShardGroupV2Basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			testAccSelectelPreCheck(t)
-			// Need to create a network by openstack operator beacause 'selectel_vpc_subnet_v2' creates a network with 'public' tag.
-			// Cickhouse api denies 'You can not use subnet {subnet_id} because it is a part of the external network'.
 			testAccDBaaSV2PreCheck(t)
 		},
 		ProviderFactories: testAccProvidersWithOpenStack,
@@ -38,19 +35,19 @@ func TestAccDBaaSClickhouseShardGroupV2Basic(t *testing.T) {
 			{
 				Config: testAccDBaaSClickhouseShardGroupV2Basic(datastoreName, shardNamesGr1, shardNamesGr2, descGr1, descGr2),
 				Check: resource.ComposeTestCheckFunc(
-					testAccCheckDBaaSV2ClickhouseDatastoreExists(resourceDBaaSClisckhouseDatastoreV2Name, &dbaasDatastore),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "name", datastoreName),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "region", dbaasRegion),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "status", string(dbaas_v2_common.DatastoreStatusActive)),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "state", string(dbaas_v2_common.DatastoreStateRunning)),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.#", "3"),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.0.name", "keepers"),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.1.name", "shard1"),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "node_groups.2.name", "shard2"),
+					testAccCheckDBaaSV2ClickhouseDatastoreExists(resourceDBaaSClickhouseDatastoreV2Name, &dbaasDatastore),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "name", datastoreName),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "region", dbaasRegion),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "status", string(dbaas_v2_common.DatastoreStatusActive)),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "state", string(dbaas_v2_common.DatastoreStateRunning)),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.#", "3"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.name", "keepers"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.1.name", "shard1"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.2.name", "shard2"),
 
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "log_platform.0.log_group", logGroup),
-					resource.TestCheckResourceAttr(resourceDBaaSClisckhouseDatastoreV2Name, "security_groups.#", "1"),
-					resource.TestCheckResourceAttrSet(resourceDBaaSClisckhouseDatastoreV2Name, "security_groups.0"), // first item is not empty string
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "log_platform.0.log_group", logGroup),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "security_groups.#", "1"),
+					resource.TestCheckResourceAttrSet(resourceDBaaSClickhouseDatastoreV2Name, "security_groups.0"), // first item is not empty string
 
 					resource.TestCheckResourceAttr("selectel_dbaas_clickhouse_shard_group_v2.shard_gr_test_1", "name", "gr1"),
 					resource.TestCheckResourceAttr("selectel_dbaas_clickhouse_shard_group_v2.shard_gr_test_1", "description", descGr1),
@@ -86,8 +83,13 @@ func TestAccDBaaSClickhouseShardGroupV2Basic(t *testing.T) {
 
 func testAccDBaaSClickhouseShardGroupV2Basic(datastoreName, shardNamesGr1, shardNamesGr2, descGr1, descGr2 string) string {
 	return fmt.Sprintf(`
+locals {
+  project_id      = "%s"
+  region_name     = "%s"
+}
+
 provider openstack {
-	tenant_id = "%s"
+	tenant_id = local.project_id
 }
 
 resource "openstack_networking_secgroup_v2" "ds_sg" {
@@ -95,7 +97,7 @@ resource "openstack_networking_secgroup_v2" "ds_sg" {
 }
 
 resource "openstack_networking_network_v2" "ds_net" {
- 	region = "%s"
+ 	region = local.region_name
   	name = "network_test"
 }
 
@@ -108,8 +110,8 @@ resource "openstack_networking_subnet_v2" "ds_subnet" {
 }
 
 data "selectel_dbaas_datastore_type_v2" "dt" {
-  project_id = "%s"
-  region = "%s"
+  project_id = local.project_id
+  region = local.region_name
   filter {
     engine = "clickhouse"
     version = "26.3.12.3"
@@ -118,8 +120,8 @@ data "selectel_dbaas_datastore_type_v2" "dt" {
 }
 
 data "selectel_dbaas_flavor_v2" "keeper_flavor" {
-  project_id = "%s"
-  region     = "%s"
+  project_id = local.project_id
+  region     = local.region_name
   filter {
     datastore_type_id = "${data.selectel_dbaas_datastore_type_v2.dt.datastore_types[0].id}"
 	allowed_role = "KEEPER"
@@ -128,8 +130,8 @@ data "selectel_dbaas_flavor_v2" "keeper_flavor" {
 
 resource "selectel_dbaas_clickhouse_datastore_v2" "datastore_tf_acc_test_1" {
   name = "%s"
-  project_id = "%s"
-  region = "%s"
+  project_id = local.project_id
+  region = local.region_name
   type_id = "${data.selectel_dbaas_datastore_type_v2.dt.datastore_types[0].id}"
   subnet_id = "${openstack_networking_subnet_v2.ds_subnet.id}"
   password = "Iu2YgYlk!ORz"
@@ -178,8 +180,8 @@ resource "selectel_dbaas_clickhouse_datastore_v2" "datastore_tf_acc_test_1" {
 
 resource "selectel_dbaas_clickhouse_shard_group_v2" "shard_gr_test_1" {
   name = "gr1"
-  project_id = "%s"
-  region = "%s"
+  project_id = local.project_id
+  region = local.region_name
   datastore_id = "${selectel_dbaas_clickhouse_datastore_v2.datastore_tf_acc_test_1.id}"
   shard_names = %s
   description = "%s"
@@ -187,12 +189,12 @@ resource "selectel_dbaas_clickhouse_shard_group_v2" "shard_gr_test_1" {
 
 resource "selectel_dbaas_clickhouse_shard_group_v2" "shard_gr_test_2" {
   name = "gr2"
-  project_id = "%s"
-  region = "%s"
+  project_id = local.project_id
+  region = local.region_name
   datastore_id = "${selectel_dbaas_clickhouse_datastore_v2.datastore_tf_acc_test_1.id}"
   shard_names = %s
   // description
   %s
 }
-`, dbaasProjectID, dbaasRegion, dbaasProjectID, dbaasRegion, dbaasProjectID, dbaasRegion, datastoreName, dbaasProjectID, dbaasRegion, datastoreName, dbaasProjectID, dbaasRegion, shardNamesGr1, descGr1, dbaasProjectID, dbaasRegion, shardNamesGr2, descGr2)
+`, dbaasProjectID, dbaasRegion, datastoreName, datastoreName, shardNamesGr1, descGr1, shardNamesGr2, descGr2)
 }

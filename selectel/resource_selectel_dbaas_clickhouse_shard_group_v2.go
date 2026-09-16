@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -95,6 +96,11 @@ func resourceDBaaSV2ClickhouseShardGroupRead(ctx context.Context, d *schema.Reso
 	if err != nil {
 		return diag.FromErr(errGettingObject(objectShardGroup, shardGroupID, err))
 	}
+	// shard group not found. Clearing the state.
+	if shardGroup == nil {
+		d.SetId("")
+		return nil
+	}
 
 	log.Print(msgGet(objectDatastore, datastoreID))
 	datastore, err := dbaasClient.ClickHouse.GetDatastore(ctx, datastoreID)
@@ -123,10 +129,10 @@ func resourceDBaaSV2ClickhouseShardGroupUpdate(ctx context.Context, d *schema.Re
 	shardGroupID := d.Id()
 	datastoreID := d.Get("datastore_id").(string)
 
-	log.Print(msgGet(objectDatastore, d.Id()))
+	log.Print(msgGet(objectDatastore, datastoreID))
 	datastore, err := dbaasClient.ClickHouse.GetDatastore(ctx, datastoreID)
 	if err != nil {
-		return diag.FromErr(errGettingObject(objectDatastore, d.Id(), err))
+		return diag.FromErr(errGettingObject(objectDatastore, datastoreID, err))
 	}
 
 	if d.HasChange("description") {
@@ -148,7 +154,7 @@ func resourceDBaaSV2ClickhouseShardGroupUpdate(ctx context.Context, d *schema.Re
 	log.Print(msgUpdate(objectShardGroup, shardGroupID, shardGroupUpdateOpts))
 	_, err = dbaasClient.ClickHouse.UpdateShardGroup(ctx, datastoreID, shardGroupID, shardGroupUpdateOpts)
 	if err != nil {
-		return diag.FromErr(errCreatingObject(objectShardGroup, err))
+		return diag.FromErr(errUpdatingObject(objectShardGroup, shardGroupID, err))
 	}
 
 	log.Printf("[DEBUG] waiting for datastore %s to become 'ACTIVE'", datastore.ID)
@@ -227,12 +233,12 @@ func resolveDBaaSv2ClickhouseShardNames(
 
 	for _, shardID := range shardIDs {
 
-		shardID, exists := shardNameByID[shardID]
+		shardName, exists := shardNameByID[shardID]
 		if !exists {
 			return nil, fmt.Errorf("shard %s not found in datastore %s", shardID, datastore.ID)
 		}
 
-		shardNames = append(shardNames, shardID)
+		shardNames = append(shardNames, shardName)
 
 	}
 	return shardNames, nil
@@ -243,22 +249,21 @@ func getDBaaSV2ClickhouseShardGroup(
 	client *dbaas_v2.API,
 	datastoreID string,
 	shardGroupID string,
-) (dbaas_v2_ch.ShardGroupResponse, error) {
-	shardGroup := dbaas_v2_ch.ShardGroupResponse{}
+) (*dbaas_v2_ch.ShardGroupResponse, error) {
 
 	// no endpoint to get by id
 	shardGroups, err := client.ClickHouse.GetShardGroups(ctx, datastoreID)
 	if err != nil {
-		return shardGroup, fmt.Errorf("error getting shard group %s for for datastore %s", shardGroupID, datastoreID)
+		return nil, fmt.Errorf("error getting shard group %s for datastore %s: %w", shardGroupID, datastoreID, err)
 	}
 
 	for _, shardGroup := range shardGroups {
 		if shardGroup.ID == shardGroupID {
-			return shardGroup, nil
+			return &shardGroup, nil
 		}
 	}
 
-	return shardGroup, fmt.Errorf("shard group %s not found for datastore %s", shardGroupID, datastoreID)
+	return nil, nil
 }
 
 func resourceDBaaSV2ClickhouseShardGroupImportState(_ context.Context, d *schema.ResourceData, meta any) ([]*schema.ResourceData, error) {
@@ -272,6 +277,23 @@ func resourceDBaaSV2ClickhouseShardGroupImportState(_ context.Context, d *schema
 
 	d.Set("project_id", config.ProjectID)
 	d.Set("region", config.Region)
+
+	parts := strings.SplitN(d.Id(), "/", 2)
+	if len(parts) != 2 {
+		return nil, fmt.Errorf(
+			"invalid import ID %q, expected <datastore_id>/<shard_group_id>",
+			d.Id(),
+		)
+	}
+
+	datastoreID := parts[0]
+	shardGroupID := parts[1]
+
+	if err := d.Set("datastore_id", datastoreID); err != nil {
+		return nil, err
+	}
+
+	d.SetId(shardGroupID)
 
 	return []*schema.ResourceData{d}, nil
 }
