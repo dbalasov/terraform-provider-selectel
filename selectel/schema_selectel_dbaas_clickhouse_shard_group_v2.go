@@ -27,12 +27,14 @@ func resourceDBaaSV2ClickhouseShardGroupSchema() map[string]*schema.Schema {
 		"datastore_id": {
 			Type:         schema.TypeString,
 			Required:     true,
+			ForceNew:     true,
 			ValidateFunc: validation.IsUUID,
 		},
 
 		"name": {
 			Type:     schema.TypeString,
 			Required: true,
+			ForceNew: true,
 		},
 
 		"shard_names": {
