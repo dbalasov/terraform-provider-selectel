@@ -158,7 +158,6 @@ func dbaasV2ClickhouseNodeGroupSchema() map[string]*schema.Schema {
 
 func dbaasV2ClickhouseFlavorSchema() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
-
 		"id": {
 			Type:     schema.TypeString,
 			Optional: true,
