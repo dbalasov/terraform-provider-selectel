@@ -1,11 +1,61 @@
 package selectel
 
 import (
+	"bytes"
+	"fmt"
+
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	dbaas_v2_ch "github.com/selectel/dbaas-go/v2/clickhouse"
 	dbaas_v2_common "github.com/selectel/dbaas-go/v2/common"
 )
+
+func clickhouseNodeGroupHash(v interface{}) int {
+	var buf bytes.Buffer
+	m := v.(map[string]interface{})
+
+	if name, ok := m["name"]; ok {
+		buf.WriteString(fmt.Sprintf("%s-", name.(string)))
+	}
+
+	// if role, ok := m["role"]; ok {
+	// 	buf.WriteString(fmt.Sprintf("%s-", role.(string)))
+	// }
+
+	// if nodeCount, ok := m["node_count"]; ok {
+	// 	buf.WriteString(fmt.Sprintf("%d-", nodeCount.(int)))
+	// }
+
+	// if weight, ok := m["weight"]; ok {
+	// 	buf.WriteString(fmt.Sprintf("%d-", weight.(int)))
+	// }
+
+	// if hasPublicIPs, ok := m["has_public_ips"]; ok {
+	// 	buf.WriteString(fmt.Sprintf("%t-", hasPublicIPs.(bool)))
+	// }
+
+	// if configs, ok := m["flavor"].([]interface{}); ok && len(configs) > 0 {
+	// 	if configMap, ok := configs[0].(map[string]interface{}); ok {
+	// 		if flavorType, ok := configMap["type"]; ok {
+	// 			buf.WriteString(fmt.Sprintf("%s-", flavorType.(string)))
+	// 		}
+	// 		if ram, ok := configMap["ram"]; ok {
+	// 			buf.WriteString(fmt.Sprintf("%d-", ram.(int)))
+	// 		}
+	// 		if vcpus, ok := configMap["vcpus"]; ok {
+	// 			buf.WriteString(fmt.Sprintf("%d-", vcpus.(int)))
+	// 		}
+	// 		if disk, ok := configMap["disk"]; ok {
+	// 			buf.WriteString(fmt.Sprintf("%d-", disk.(int)))
+	// 		}
+	// 		if diskType, ok := configMap["disk_type"]; ok {
+	// 			buf.WriteString(fmt.Sprintf("%s-", diskType.(string)))
+	// 		}
+	// 	}
+	// }
+
+	return schema.HashString(buf.String())
+}
 
 func resourceDBaaSV2ClickhouseDatastoreSchema() map[string]*schema.Schema {
 	datastoreSchema := resourceDBaaSV2DatastoreBaseSchema()
@@ -18,13 +68,14 @@ func resourceDBaaSV2ClickhouseDatastoreSchema() map[string]*schema.Schema {
 	}
 
 	datastoreSchema["node_groups"] = &schema.Schema{
-		Type:     schema.TypeList,
+		Type:     schema.TypeSet,
 		Required: true,
 		MinItems: 1,
 
 		Elem: &schema.Resource{
 			Schema: dbaasV2ClickhouseNodeGroupSchema(),
 		},
+		Set: clickhouseNodeGroupHash,
 	}
 
 	datastoreSchema["config"] = &schema.Schema{

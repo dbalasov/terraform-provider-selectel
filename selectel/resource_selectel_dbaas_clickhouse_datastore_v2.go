@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	dbaas_v2 "github.com/selectel/dbaas-go/v2"
 	dbaas_v2_ch "github.com/selectel/dbaas-go/v2/clickhouse"
@@ -22,9 +21,9 @@ func resourceDBaaSV2ClickhouseDatastore() *schema.Resource {
 		ReadContext:   resourceDBaaSV2ClickhouseDatastoreRead,
 		UpdateContext: resourceDBaaSV2ClickhouseDatastoreUpdate,
 		DeleteContext: resourceDBaaSV2ClickhouseDatastoreDelete,
-		CustomizeDiff: customdiff.All(
-			validateDBaaSV2ClickhouseDatastoreDiff,
-		),
+		// CustomizeDiff: customdiff.All(
+		// 	validateDBaaSV2ClickhouseDatastoreDiff,
+		// ),
 		Importer: &schema.ResourceImporter{
 			StateContext: resourceDBaaSV2ClickhouseDatastoreImportState,
 		},
@@ -49,7 +48,8 @@ func resourceDBaaSV2ClickhouseDatastoreCreate(ctx context.Context, d *schema.Res
 		return diagErr
 	}
 
-	nodeGroups := expandDBaasV2ClickhouseNodeGroupsCreate(d.Get("node_groups").([]any))
+	ng := d.Get("node_groups").(*schema.Set)
+	nodeGroups := expandDBaasV2ClickhouseNodeGroupsCreate(ng.List())
 
 	datastoreCreateOpts := dbaas_v2_ch.DatastoreCreateRequest{
 		Name:       d.Get("name").(string),
@@ -125,7 +125,9 @@ func resourceDBaaSV2ClickhouseDatastoreRead(ctx context.Context, d *schema.Resou
 	}
 
 	nodeGroups := flattenDBaaSV2DatastoreClickhouseNodeGroups(datastore.NodeGroups)
-	if err := d.Set("node_groups", nodeGroups); err != nil {
+	nodeGroupSet := schema.NewSet(clickhouseNodeGroupHash, nodeGroups)
+
+	if err := d.Set("node_groups", nodeGroupSet); err != nil {
 		log.Print(errSettingComplexAttr("node_groups", err))
 	}
 
@@ -166,15 +168,15 @@ func resourceDBaaSV2ClickhouseDatastoreUpdate(ctx context.Context, d *schema.Res
 	if d.HasChange("node_groups") {
 		oldRaw, newRaw := d.GetChange("node_groups")
 
-		oldGroups := oldRaw.([]any)
-		newGroups := newRaw.([]any)
+		oldGroups := oldRaw.(*schema.Set)
+		newGroups := newRaw.(*schema.Set)
 
 		if err := reconcileDBaaSV2ClickhouseNodeGroups(
 			ctx,
 			dbaasClient,
 			d.Id(),
-			oldGroups,
-			newGroups,
+			oldGroups.List(),
+			newGroups.List(),
 			timeout,
 			allowReduceNodes.(bool),
 		); err != nil {
@@ -419,13 +421,15 @@ func validateDBaaSV2ClickhouseDatastoreDiff(
 	diff *schema.ResourceDiff,
 	meta any,
 ) error {
-	rawNewGroups, ok := diff.Get("node_groups").([]any)
+	rawNewGroups, ok := diff.Get("node_groups").(*schema.Set)
+	fmt.Printf("node_groups type = %+v\n", rawNewGroups)
+
 	if !ok {
-		return nil
+		return fmt.Errorf("unexpected node_groups type: %T", rawNewGroups)
 	}
 
-	seen := make(map[string]map[string]any, len(rawNewGroups))
-	for _, rawNewGroup := range rawNewGroups {
+	seen := make(map[string]map[string]any, rawNewGroups.Len())
+	for _, rawNewGroup := range rawNewGroups.List() {
 		newGroup := rawNewGroup.(map[string]any)
 
 		if err := validateDBaaSV2ClickHouseNodeGroup(newGroup); err != nil {
@@ -477,6 +481,8 @@ func validateDBaaSV2ClickHouseNodeGroup(group map[string]any) error {
 		}
 	}
 
+	log.Printf("############  validateDBaaSV2ClickHouseNodeGroupFlavor %+v", group)
+
 	if err := validateDBaaSV2ClickHouseNodeGroupFlavor(group); err != nil {
 		return err
 	}
@@ -489,6 +495,7 @@ func clickhouseNodeGroupsByName(groups []any) map[string]map[string]any {
 
 	for _, raw := range groups {
 		group := raw.(map[string]any)
+		log.Printf("############ %+v", group)
 		name := group["name"].(string)
 		result[name] = group
 	}
@@ -499,18 +506,20 @@ func clickhouseNodeGroupsByName(groups []any) map[string]map[string]any {
 func validateDBaaSV2ClickhouseNodeGroupsDiff(diff *schema.ResourceDiff) error {
 	rawOld, rawNew := diff.GetChange("node_groups")
 
-	oldGroups, ok := rawOld.([]any)
+	oldGroups, ok := rawOld.(*schema.Set)
 	if !ok {
 		return nil
 	}
 
-	newGroups, ok := rawNew.([]any)
+	newGroups, ok := rawNew.(*schema.Set)
 	if !ok {
 		return nil
 	}
 
-	oldByName := clickhouseNodeGroupsByName(oldGroups)
-	newByName := clickhouseNodeGroupsByName(newGroups)
+	log.Printf("!!!!!!!!!!!!!!!! oldByName")
+	oldByName := clickhouseNodeGroupsByName(oldGroups.List())
+	log.Printf("!!!!!!!!!!!!!!!! newByName")
+	newByName := clickhouseNodeGroupsByName(newGroups.List())
 
 	// can't change role for existing group
 	for name, oldGroup := range oldByName {
@@ -530,7 +539,7 @@ func validateDBaaSV2ClickhouseNodeGroupsDiff(diff *schema.ResourceDiff) error {
 		}
 	}
 
-	if len(oldGroups) == len(newByName) {
+	if len(oldByName) == len(newByName) {
 		for name := range oldByName {
 			if _, exists := newByName[name]; !exists {
 				return fmt.Errorf(
