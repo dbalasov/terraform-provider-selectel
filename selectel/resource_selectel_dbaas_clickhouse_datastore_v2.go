@@ -113,6 +113,7 @@ func resourceDBaaSV2ClickhouseDatastoreRead(ctx context.Context, d *schema.Resou
 			d.SetId("")
 			return nil
 		}
+
 		return diag.FromErr(errGettingObject(objectDatastore, d.Id(), err))
 	}
 
@@ -147,7 +148,6 @@ func resourceDBaaSV2ClickhouseDatastoreRead(ctx context.Context, d *schema.Resou
 			// delete ng which was handeled
 			delete(apiNodeGroupsMap, name)
 		}
-
 	}
 	// add an api node group that is not in the HCL (not created using Terraform)
 	for _, apiGroup := range apiNodeGroupsMap {
@@ -209,7 +209,6 @@ func resourceDBaaSV2ClickhouseDatastoreUpdate(ctx context.Context, d *schema.Res
 		); err != nil {
 			return diag.FromErr(err)
 		}
-
 	}
 	if d.HasChange("config") {
 		// Update config
@@ -239,7 +238,6 @@ func reconcileDBaaSV2ClickhouseNodeGroups(
 	timeout time.Duration,
 	allow_reduce_nodes bool,
 ) error {
-
 	oldByName := clickhouseNodeGroupsByName(oldGroups)
 	newByName := clickhouseNodeGroupsByName(newGroups)
 
@@ -253,6 +251,7 @@ func reconcileDBaaSV2ClickhouseNodeGroups(
 			); err != nil {
 				return fmt.Errorf("creating node group error: %w", err)
 			}
+
 			continue
 		}
 
@@ -266,7 +265,6 @@ func reconcileDBaaSV2ClickhouseNodeGroups(
 
 	// Delete.
 	for name, oldGroup := range oldByName {
-
 		if _, exists := newByName[name]; exists {
 			continue
 		}
@@ -404,9 +402,10 @@ func getInstanceIDsToReduceClickhouseNodeGroupCount(oldInstances []any, oldNodeC
 			return nil, errors.New("can't parse instance from state to reduce node count")
 		}
 	}
-	return targetIDs, nil
 
+	return targetIDs, nil
 }
+
 func resourceDBaaSV2ClickhouseDatastoreDelete(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	dbaasClient, diagErr := getDBaaSV2Client(d, meta)
 	if diagErr != nil {
@@ -425,6 +424,7 @@ func resourceDBaaSV2ClickhouseDatastoreDelete(ctx context.Context, d *schema.Res
 	if err != nil {
 		return diag.FromErr(errDeletingObject(objectDatastore, d.Id(), err))
 	}
+
 	return nil
 }
 
@@ -472,6 +472,7 @@ func validateDBaaSV2ClickhouseDatastoreDiff(
 	if err := validateDBaaSV2ClickhouseNodeGroupsDiff(diff); err != nil {
 		return err
 	}
+
 	return nil
 }
 

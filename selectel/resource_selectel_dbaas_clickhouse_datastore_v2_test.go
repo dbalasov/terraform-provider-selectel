@@ -23,7 +23,6 @@ var (
 )
 
 func testAccCheckDBaaSV2ClickhouseDatastoreDestroy(s *terraform.State) error {
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "selectel_dbaas_clickhouse_datastore_v2" {
 			continue
@@ -41,7 +40,6 @@ func testAccCheckDBaaSV2ClickhouseDatastoreDestroy(s *terraform.State) error {
 				rs.Primary.ID,
 			)
 		}
-
 	}
 
 	return nil
@@ -296,6 +294,7 @@ func testAccDBaaSClickhouseDatastoreV2Basic(datastoreName, datastorePassword, da
 	if shardOneHasPublicIps {
 		HasPublickIPsBlock = "has_public_ips = true"
 	}
+
 	return fmt.Sprintf(`
 locals {
   project_id = "%s"
