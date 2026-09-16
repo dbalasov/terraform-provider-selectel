@@ -124,8 +124,29 @@ func resourceDBaaSV2ClickhouseDatastoreRead(ctx context.Context, d *schema.Resou
 		})
 	}
 
-	nodeGroups := flattenDBaaSV2DatastoreClickhouseNodeGroups(datastore.NodeGroups)
-	if err := d.Set("node_groups", nodeGroups); err != nil {
+	// sort node goups from api as in config
+	apiNodeGroups := flattenDBaaSV2DatastoreClickhouseNodeGroups(datastore.NodeGroups)
+	apiNodeGroupsMap := clickhouseNodeGroupsByName(apiNodeGroups)
+	configNodeGroups := d.Get("node_groups").([]any)
+	sortedNodeGroups := make([]any, 0, len(apiNodeGroups))
+
+	for _, ng := range configNodeGroups {
+		ngMap := ng.(map[string]interface{})
+		name := ngMap["name"].(string)
+
+		if apiNG, found := apiNodeGroupsMap[name]; found {
+			sortedNodeGroups = append(sortedNodeGroups, apiNG)
+			// delete ng which was handeled
+			delete(apiNodeGroupsMap, name)
+		}
+
+	}
+	// add an api node group that is not in the HCL (not created using Terraform)
+	for _, apiGroup := range apiNodeGroupsMap {
+		sortedNodeGroups = append(sortedNodeGroups, apiGroup)
+	}
+
+	if err := d.Set("node_groups", sortedNodeGroups); err != nil {
 		log.Print(errSettingComplexAttr("node_groups", err))
 	}
 
@@ -530,7 +551,7 @@ func validateDBaaSV2ClickhouseNodeGroupsDiff(diff *schema.ResourceDiff) error {
 		}
 	}
 
-	if len(oldGroups) == len(newByName) {
+	if len(oldByName) == len(newByName) {
 		for name := range oldByName {
 			if _, exists := newByName[name]; !exists {
 				return fmt.Errorf(
