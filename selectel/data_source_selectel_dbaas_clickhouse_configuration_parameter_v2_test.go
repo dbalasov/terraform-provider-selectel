@@ -66,7 +66,7 @@ func TestAccDBaaSV2ClickhouseConfigurationParametersBasic(t *testing.T) {
 					resource.TestCheckResourceAttr("data.selectel_dbaas_clickhouse_configuration_parameter_v2.configuration_param_tf_acc_test_1", "configuration_parameters.0.is_restart_required", "true"),
 					resource.TestCheckResourceAttr("data.selectel_dbaas_clickhouse_configuration_parameter_v2.configuration_param_tf_acc_test_1", "configuration_parameters.0.is_changeable", "true"),
 					resource.TestCheckResourceAttr("data.selectel_dbaas_clickhouse_configuration_parameter_v2.configuration_param_tf_acc_test_1", "configuration_parameters.0.is_multiple_choice_available", "false"),
-					resource.TestCheckResourceAttr("data.selectel_dbaas_clickhouse_configuration_parameter_v2.configuration_param_tf_acc_test_1", "configuration_parameters.0.can_be_empty", "true"),
+					resource.TestCheckResourceAttr("data.selectel_dbaas_clickhouse_configuration_parameter_v2.configuration_param_tf_acc_test_1", "configuration_parameters.0.can_be_empty", "false"),
 				),
 			},
 		},
