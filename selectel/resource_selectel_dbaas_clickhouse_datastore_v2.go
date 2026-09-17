@@ -211,7 +211,10 @@ func resourceDBaaSV2ClickhouseDatastoreUpdate(ctx context.Context, d *schema.Res
 		}
 	}
 	if d.HasChange("config") {
-		// Update config
+		err := updateDBaaSv2ClickhouseDatastoreConfig(ctx, d, dbaasClient)
+		if err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	if d.HasChange("security_groups") {
@@ -649,4 +652,36 @@ func equalDBaaSV2ClickhouseFlavor(a, b dbaas_v2_ch.FlavorForNodeGroupRequest) bo
 	default:
 		return false
 	}
+}
+
+func updateDBaaSv2ClickhouseDatastoreConfig(ctx context.Context, d *schema.ResourceData, client *dbaas_v2.API) error {
+	var configOpts dbaas_v2_ch.DatastoreConfigRequest
+	datastore, err := client.ClickHouse.GetDatastore(ctx, d.Id())
+	if err != nil {
+		return err
+	}
+	config := d.Get("config").(map[string]any)
+
+	for param := range datastore.Config {
+		if _, ok := config[param]; !ok {
+			config[param] = nil
+		}
+	}
+
+	configOpts.Config = config
+
+	log.Print(msgUpdate(objectDatastore, d.Id(), configOpts))
+	_, err = client.ClickHouse.UpdateDatastoreConfig(ctx, d.Id(), configOpts)
+	if err != nil {
+		return errUpdatingObject(objectDatastore, d.Id(), err)
+	}
+
+	log.Printf("[DEBUG] waiting for datastore %s to become 'ACTIVE'", d.Id())
+	timeout := d.Timeout(schema.TimeoutUpdate)
+	err = waiters.WaitForDBaaSV2DatastoreRunningActive(ctx, client.ClickHouse, d.Id(), timeout)
+	if err != nil {
+		return errUpdatingObject(objectDatastore, d.Id(), err)
+	}
+
+	return nil
 }
