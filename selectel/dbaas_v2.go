@@ -121,13 +121,13 @@ func flattenDBaaSV2ClickhouseNodeGroupFlavor(f dbaas_v2_ch.FlavorResponse) []any
 				"disk_type": f.DiskType,
 			},
 		}
-	} else {
-		return []any{
-			map[string]any{
-				"id":   f.ID,
-				"type": f.Type,
-			},
-		}
+	}
+	// for FIXED
+	return []any{
+		map[string]any{
+			"id":   f.ID,
+			"type": f.Type,
+		},
 	}
 }
 

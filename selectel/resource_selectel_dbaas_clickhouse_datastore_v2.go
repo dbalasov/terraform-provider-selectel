@@ -158,7 +158,6 @@ func resourceDBaaSV2ClickhouseDatastoreRead(ctx context.Context, d *schema.Resou
 		log.Print(errSettingComplexAttr("node_groups", err))
 	}
 
-	// TODO: convert by getting params and use its type
 	configMap := make(map[string]string)
 	for key, value := range datastore.Config {
 		configMap[key] = convertFieldToStringByType(value)
@@ -239,7 +238,7 @@ func reconcileDBaaSV2ClickhouseNodeGroups(
 	oldGroups []any,
 	newGroups []any,
 	timeout time.Duration,
-	allow_reduce_nodes bool,
+	allowReduceNodes bool,
 ) error {
 	oldByName := clickhouseNodeGroupsByName(oldGroups)
 	newByName := clickhouseNodeGroupsByName(newGroups)
@@ -261,7 +260,7 @@ func reconcileDBaaSV2ClickhouseNodeGroups(
 		oldID := oldGroup["id"].(string)
 
 		if err := reconcileDBaaSV2ClickhouseNodeGroup(
-			ctx, client, datastoreID, oldID, oldGroup, newGroup, timeout, allow_reduce_nodes); err != nil {
+			ctx, client, datastoreID, oldID, oldGroup, newGroup, timeout, allowReduceNodes); err != nil {
 			return fmt.Errorf("reconciliation node group error: %w", err)
 		}
 	}
@@ -447,9 +446,9 @@ func resourceDBaaSV2ClickhouseDatastoreImportState(_ context.Context, d *schema.
 }
 
 func validateDBaaSV2ClickhouseDatastoreDiff(
-	ctx context.Context,
+	_ context.Context,
 	diff *schema.ResourceDiff,
-	meta any,
+	_ any,
 ) error {
 	rawNewGroups, ok := diff.Get("node_groups").([]any)
 	if !ok {
@@ -487,7 +486,7 @@ func validateDBaaSV2ClickHouseNodeGroup(group map[string]any) error {
 	nodeCount := group["node_count"].(int)
 
 	if name == "" {
-		return errors.New("node group with empty name.")
+		return errors.New("node group with empty name")
 	}
 
 	if nodeCount < 1 {
