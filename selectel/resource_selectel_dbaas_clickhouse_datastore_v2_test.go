@@ -82,7 +82,7 @@ func TestAccDBaaSClickhouseDatastoreV2Basic(t *testing.T) {
 	var dbaasDatastore dbaas_v2_ch.DatastoreResponse
 
 	datastoreName := acctest.RandomWithPrefix("tf-acc-ds")
-	datastorePassword := "Iu2YgYlk!ORz"
+	datastorePassword := "Iu2YgYlk!ORz" // nolint:gosec
 	datastoreSG := ""
 	shardOneWeight := 50
 	shardOneNodeCount := 1
@@ -98,7 +98,7 @@ func TestAccDBaaSClickhouseDatastoreV2Basic(t *testing.T) {
 	allowReduceNodes := false
 
 	updatedDatastoreName := acctest.RandomWithPrefix("tf-acc-ds-updated")
-	updatedDatastorePassword := "Iu2YgYlk!ORzUpd"
+	updatedDatastorePassword := "Iu2YgYlk!ORzUpd" // nolint:gosec
 	updatedShardOneWeight := 70
 	updatedshardOneNodeCountTwo := 2
 	updatedshardOneNodeCountOne := 1
@@ -439,7 +439,6 @@ func TestAccDBaaSClickhouseDatastoreV2Config(t *testing.T) {
 
 // testAccDBaaSClickhouseDatastoreV2Config is a simple cluster for update config.
 func testAccDBaaSClickhouseDatastoreV2Config(configBlock string) string {
-
 	return fmt.Sprintf(`
 locals {
   project_id = "%s"
