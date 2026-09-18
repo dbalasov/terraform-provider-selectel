@@ -388,3 +388,123 @@ resource "selectel_dbaas_clickhouse_datastore_v2" "datastore_tf_acc_test_1" {
   }
 }`, dbaasProjectID, dbaasRegion, datastoreName, datastorePassword, securityGroupsBlock, strconv.FormatBool(allowReduceNodes), keepersBlock, shardOneNodeCount, shardOneWeight, HasPublickIPsBlock, shardOneFlavor.Type, shardOneFlavor.VCPUs, shardOneFlavor.RAM, shardOneFlavor.Disk, shardOneFlavor.DiskType)
 }
+
+func TestAccDBaaSClickhouseDatastoreV2Config(t *testing.T) {
+	var dbaasDatastore dbaas_v2_ch.DatastoreResponse
+
+	configBlock := ""
+	updatedConfigBlock := `
+	config = {
+		"server_settings.async_insert_threads" = 10
+		(data.selectel_dbaas_clickhouse_configuration_parameter_v2.cp_mt.configuration_parameters[0].name) = "rebuild"
+	}
+	`
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccDBaaSV2PreCheck(t) },
+		ProviderFactories: testAccProvidersWithOpenStack,
+		CheckDestroy:      testAccCheckDBaaSV2ClickhouseDatastoreDestroy,
+		Steps: []resource.TestStep{
+			// with empty config
+			{
+				Config: testAccDBaaSClickhouseDatastoreV2Config(configBlock),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckDBaaSV2ClickhouseDatastoreExists(resourceDBaaSClickhouseDatastoreV2Name, &dbaasDatastore),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "name", "TestDS"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "region", dbaasRegion),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "status", string(dbaas_v2_common.DatastoreStatusActive)),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "state", string(dbaas_v2_common.DatastoreStateRunning)),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.#", "1"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.name", "shard1"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.node_count", "1"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.role", "DATA"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "node_groups.0.weight", "100"),
+
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "config.%", "0"),
+				),
+			},
+			// Update datastore config
+			{
+				Config: testAccDBaaSClickhouseDatastoreV2Config(updatedConfigBlock),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "config.%", "2"),
+
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "config.server_settings.async_insert_threads", "10"),
+					resource.TestCheckResourceAttr(resourceDBaaSClickhouseDatastoreV2Name, "config.merge_tree_settings.deduplicate_merge_projection_mode", "rebuild"),
+				),
+			},
+		},
+	})
+}
+
+// testAccDBaaSClickhouseDatastoreV2Config is a simple cluster for update config.
+func testAccDBaaSClickhouseDatastoreV2Config(configBlock string) string {
+
+	return fmt.Sprintf(`
+locals {
+  project_id = "%s"
+  region_name     = "%s"
+}
+
+provider openstack {
+	tenant_id = local.project_id
+}
+
+resource "openstack_networking_network_v2" "ds_net" {
+ 	region = local.region_name
+  	name = "network_test"
+}
+
+resource "openstack_networking_subnet_v2" "ds_subnet" {
+  network_id = openstack_networking_network_v2.ds_net.id
+  cidr       = "192.168.1.0/24"
+  ip_version = 4
+  enable_dhcp = false
+  name = "subnet_test"
+}
+
+data "selectel_dbaas_datastore_type_v2" "dt" {
+  project_id = local.project_id
+  region = local.region_name
+  filter {
+    engine = "clickhouse"
+    version = "26.3.12.3"
+
+  }
+}
+
+data "selectel_dbaas_clickhouse_configuration_parameter_v2" "cp_mt" {
+  project_id = local.project_id
+  region     = local.region_name
+  filter {
+    datastore_type_id = "${data.selectel_dbaas_datastore_type_v2.dt.datastore_types[0].id}"
+    name = "merge_tree_settings.deduplicate_merge_projection_mode"
+  }
+}
+
+resource "selectel_dbaas_clickhouse_datastore_v2" "datastore_tf_acc_test_1" {
+  name = "TestDS"
+  project_id = local.project_id
+  region = local.region_name
+  type_id = "${data.selectel_dbaas_datastore_type_v2.dt.datastore_types[0].id}"
+  subnet_id = "${openstack_networking_subnet_v2.ds_subnet.id}"
+  password = "Iu2YgYlk!ORz"
+  // config
+  %s
+
+  node_groups {
+    name       = "shard1" 
+    role       = "DATA"
+    node_count = "1"
+	weight     = "100"
+
+    flavor {
+      type  = "FLEXIBLE"
+      vcpus = "2"
+      ram   = "4096"
+      disk  = "32"
+      disk_type = "NETWORK_ULTRA"
+    }
+  }
+}`, dbaasProjectID, dbaasRegion, configBlock)
+}
