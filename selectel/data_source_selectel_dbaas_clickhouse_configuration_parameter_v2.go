@@ -181,10 +181,7 @@ func dataSourceDBaaSV2ClickhouseConfigurationParameterRead(ctx context.Context, 
 		configurationParametersIDs = append(configurationParametersIDs, param.ID)
 	}
 
-	filter, err := expandDBaaSV2ConfigurationParameterSearchFilter(d.Get("filter").(*schema.Set))
-	if err != nil {
-		return diag.FromErr(err)
-	}
+	filter := expandDBaaSV2ConfigurationParameterSearchFilter(d.Get("filter").(*schema.Set))
 
 	configurationParameters = filterDBaaSV2ClickhouseConfigurationParametersByDatastoreTypeID(configurationParameters, filter.datastoreTypeID)
 	configurationParameters = filterDBaaSV2ClickhouseConfigurationParametersByName(configurationParameters, filter.name)

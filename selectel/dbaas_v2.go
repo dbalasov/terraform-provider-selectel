@@ -488,10 +488,10 @@ type dbaasV2ConfigurationParameterSearchFilter struct {
 	name            string
 }
 
-func expandDBaaSV2ConfigurationParameterSearchFilter(filterSet *schema.Set) (dbaasV2ConfigurationParameterSearchFilter, error) {
+func expandDBaaSV2ConfigurationParameterSearchFilter(filterSet *schema.Set) dbaasV2ConfigurationParameterSearchFilter {
 	filter := dbaasV2ConfigurationParameterSearchFilter{}
 	if filterSet.Len() == 0 {
-		return filter, nil
+		return filter
 	}
 
 	resourceFilterMap := filterSet.List()[0].(map[string]any)
@@ -506,5 +506,5 @@ func expandDBaaSV2ConfigurationParameterSearchFilter(filterSet *schema.Set) (dba
 		filter.name = name.(string)
 	}
 
-	return filter, nil
+	return filter
 }

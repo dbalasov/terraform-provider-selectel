@@ -50,7 +50,7 @@ func resourceDBaaSV2ClickhouseDatastoreCreate(ctx context.Context, d *schema.Res
 		return diagErr
 	}
 
-	nodeGroups := expandDBaasV2ClickhouseNodeGroupsCreate(d.Get("node_groups").([]any))
+	nodeGroups := expandDBaasV2ClickhouseNodeGroupsCreate(d.Get("node_group").([]any))
 
 	datastoreCreateOpts := dbaas_v2_ch.DatastoreCreateRequest{
 		Name:       d.Get("name").(string),
@@ -136,7 +136,7 @@ func resourceDBaaSV2ClickhouseDatastoreRead(ctx context.Context, d *schema.Resou
 	// sort node goups from api as in config
 	apiNodeGroups := flattenDBaaSV2DatastoreClickhouseNodeGroups(datastore.NodeGroups)
 	apiNodeGroupsMap := clickhouseNodeGroupsByName(apiNodeGroups)
-	configNodeGroups := d.Get("node_groups").([]any)
+	configNodeGroups := d.Get("node_group").([]any)
 	sortedNodeGroups := make([]any, 0, len(apiNodeGroups))
 
 	for _, ng := range configNodeGroups {
@@ -154,8 +154,8 @@ func resourceDBaaSV2ClickhouseDatastoreRead(ctx context.Context, d *schema.Resou
 		sortedNodeGroups = append(sortedNodeGroups, apiGroup)
 	}
 
-	if err := d.Set("node_groups", sortedNodeGroups); err != nil {
-		log.Print(errSettingComplexAttr("node_groups", err))
+	if err := d.Set("node_group", sortedNodeGroups); err != nil {
+		log.Print(errSettingComplexAttr("node_group", err))
 	}
 
 	configMap := make(map[string]string)
@@ -191,8 +191,8 @@ func resourceDBaaSV2ClickhouseDatastoreUpdate(ctx context.Context, d *schema.Res
 	allowReduceNodes := d.Get("allow_reduce_nodes")
 	d.Set("allow_reduce_nodes", allowReduceNodes)
 
-	if d.HasChange("node_groups") {
-		oldRaw, newRaw := d.GetChange("node_groups")
+	if d.HasChange("node_group") {
+		oldRaw, newRaw := d.GetChange("node_group")
 
 		oldGroups := oldRaw.([]any)
 		newGroups := newRaw.([]any)
@@ -450,7 +450,7 @@ func validateDBaaSV2ClickhouseDatastoreDiff(
 	diff *schema.ResourceDiff,
 	_ any,
 ) error {
-	rawNewGroups, ok := diff.Get("node_groups").([]any)
+	rawNewGroups, ok := diff.Get("node_group").([]any)
 	if !ok {
 		return nil
 	}
@@ -466,7 +466,7 @@ func validateDBaaSV2ClickhouseDatastoreDiff(
 		name, _ := newGroup["name"].(string)
 
 		if _, dup := seen[name]; dup {
-			return fmt.Errorf("node_groups: duplicate group name %q", name)
+			return fmt.Errorf("node_group: duplicate group name %q", name)
 		}
 		seen[name] = newGroup
 	}
@@ -529,7 +529,7 @@ func clickhouseNodeGroupsByName(groups []any) map[string]map[string]any {
 }
 
 func validateDBaaSV2ClickhouseNodeGroupsDiff(diff *schema.ResourceDiff) error {
-	rawOld, rawNew := diff.GetChange("node_groups")
+	rawOld, rawNew := diff.GetChange("node_group")
 
 	oldGroups, ok := rawOld.([]any)
 	if !ok {
@@ -556,7 +556,7 @@ func validateDBaaSV2ClickhouseNodeGroupsDiff(diff *schema.ResourceDiff) error {
 
 		if oldRole != newRole {
 			return fmt.Errorf(
-				"node_groups: changing role of node group %q is not allowed",
+				"node_group: changing role of node group %q is not allowed",
 				name,
 			)
 		}
@@ -566,7 +566,7 @@ func validateDBaaSV2ClickhouseNodeGroupsDiff(diff *schema.ResourceDiff) error {
 		for name := range oldByName {
 			if _, exists := newByName[name]; !exists {
 				return fmt.Errorf(
-					"node_groups: changing name of node group %q is not allowed",
+					"node_group: changing name of node group %q is not allowed",
 					name,
 				)
 			}
@@ -662,6 +662,7 @@ func updateDBaaSv2ClickhouseDatastoreConfig(ctx context.Context, d *schema.Resou
 	config := d.Get("config").(map[string]any)
 
 	for param := range datastore.Config {
+		// if a param was deleted from config by client we will set nil to reset it to default on api side.
 		if _, ok := config[param]; !ok {
 			config[param] = nil
 		}
